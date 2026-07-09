@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+pydantic
+pydantic-settings
+supabase
+httpx
+redis
+structlog
+python-jose[cryptography]
+python-multipart
+python-dotenv
+aiosqlite

@@ -9,12 +9,14 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "WTO | World Trade Organization",
-  description: "The World Trade Organization — a new platform for global trade is coming.",
+  title: "WTO | Digital Dispute Documentation Platform",
+  description:
+    "The World Trade Organization Digital Dispute Documentation Platform — streamline dispute documentation for DSB simulations.",
   icons: [{ rel: "icon", url: "/logo.png" }],
   openGraph: {
-    title: "WTO | World Trade Organization",
-    description: "A new platform for global trade is coming.",
+    title: "WTO | Digital Dispute Documentation Platform",
+    description:
+      "Streamline dispute documentation for WTO DSB simulations.",
     siteName: "WTO",
     type: "website",
   },

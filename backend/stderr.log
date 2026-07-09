@@ -1,0 +1,58 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\sjari\AppData\Roaming\Python\Python314\site-packages\uvicorn\__main__.py", line 4, in <module>
+    uvicorn.main()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\sjari\AppData\Roaming\Python\Python314\site-packages\click\core.py", line 1524, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\sjari\AppData\Roaming\Python\Python314\site-packages\click\core.py", line 1445, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\sjari\AppData\Roaming\Python\Python314\site-packages\click\core.py", line 1308, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sjari\AppData\Roaming\Python\Python314\site-packages\click\core.py", line 877, in invoke
+    return callback(*args, **kwargs)
+  File "C:\Users\sjari\AppData\Roaming\Python\Python314\site-packages\uvicorn\main.py", line 441, in main
+    run(
+    ~~~^
+        app,
+        ^^^^
+    ...<48 lines>...
+        reset_contextvars=reset_contextvars,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\sjari\AppData\Roaming\Python\Python314\site-packages\uvicorn\main.py", line 609, in run
+    config.load_app()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\sjari\AppData\Roaming\Python\Python314\site-packages\uvicorn\config.py", line 415, in load_app
+    return import_from_string(self.app)
+  File "C:\Users\sjari\AppData\Roaming\Python\Python314\site-packages\uvicorn\importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "C:\Python314\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1398, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\Link_from_C\WTO\backend\app\main.py", line 8, in <module>
+    from app.api.v1.router import api_router
+  File "D:\Link_from_C\WTO\backend\app\api\v1\router.py", line 3, in <module>
+    from app.api.v1 import (
+    ...<9 lines>...
+    )
+  File "D:\Link_from_C\WTO\backend\app\api\v1\health.py", line 10, in <module>
+    from app.storage.client import storage_client
+  File "D:\Link_from_C\WTO\backend\app\storage\client.py", line 29, in <module>
+    storage_client = create_storage_client()
+  File "D:\Link_from_C\WTO\backend\app\storage\client.py", line 17, in create_storage_client
+    options = ClientOptions(
+        storage_client_backend="http",
+        headers={"Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"},
+    )
+TypeError: ClientOptions.__init__() got an unexpected keyword argument 'storage_client_backend'. Did you mean 'storage_client_timeout'?
