@@ -64,5 +64,19 @@ class NotificationService:
     async def list_notifications(self, user_id: UUID) -> Sequence[Notification]:
         return await self.notification_repo.get_by_user(user_id)
 
+    async def list_notifications_paginated(
+        self,
+        user_id: UUID,
+        page: int = 1,
+        per_page: int = 20,
+        unread_only: bool = False,
+    ) -> tuple[Sequence[Notification], int]:
+        return await self.notification_repo.get_by_user_paginated(
+            user_id=user_id,
+            page=page,
+            per_page=per_page,
+            unread_only=unread_only,
+        )
+
     async def count_unread(self, user_id: UUID) -> int:
         return await self.notification_repo.count_unread(user_id)

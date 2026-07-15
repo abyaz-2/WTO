@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 interface LoginFormProps {
@@ -100,6 +101,13 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           {loading ? "Signing in..." : "Sign In"}
         </button>
       </div>
+
+      <p className="text-center mt-6 text-xs text-[#B6C3D1]">
+        Don&apos;t have an account?{" "}
+        <Link href="/signup" className="text-[#1E6FE8] hover:underline font-semibold">
+          Sign up
+        </Link>
+      </p>
     </form>
   );
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchIssue, fetchParticipants } from "@/lib/api";
+import { fetchIssue, fetchParticipants, api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import type { UserRole } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
 import StatusBadge from "@/components/StatusBadge";
 import IssueTimeline from "@/components/IssueTimeline";
 import ParticipantList from "@/components/ParticipantList";
@@ -27,6 +29,17 @@ export default function IssueDetailClient({ issueId }: IssueDetailClientProps) {
     queryFn: () => fetchParticipants(issueId),
     enabled: !!issue,
   });
+
+  const { data: session } = useQuery({
+    queryKey: ["session"],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const userRole = (session?.user?.user_metadata?.role as UserRole) ?? "delegate";
 
   if (issueLoading) {
     return (
@@ -161,8 +174,14 @@ export default function IssueDetailClient({ issueId }: IssueDetailClientProps) {
               </h3>
               <ActionPanel
                 issueStatus={issue.current_status}
-                userRole={null}
-                onAction={(action) => console.log("Action:", action)}
+                userRole={userRole}
+                onAction={async (action) => {
+                  try {
+                    await api.post(`/issues/${issueId}/transition`, { target_status: action });
+                  } catch (err) {
+                    console.error("Transition failed:", err);
+                  }
+                }}
               />
             </motion.div>
           </div>

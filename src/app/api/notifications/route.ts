@@ -1,48 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
-  const mockNotifications = [
-    {
-      id: "notif-001",
-      type: "report_generated",
-      title: "Report Generated",
-      message: "AI report for Issue #123 has been generated successfully.",
-      issueId: "123",
-      read: false,
-      createdAt: "2026-07-08T10:30:00Z",
-    },
-    {
-      id: "notif-002",
-      type: "fact_check_completed",
-      title: "Fact Check Completed",
-      message: "Fact check for report on Issue #456 has been completed.",
-      issueId: "456",
-      read: false,
-      createdAt: "2026-07-08T09:15:00Z",
-    },
-    {
-      id: "notif-003",
-      type: "review_requested",
-      title: "Review Requested",
-      message: "A review has been requested for the report on Issue #789.",
-      issueId: "789",
-      read: true,
-      createdAt: "2026-07-07T14:00:00Z",
-    },
-  ];
+const BACKEND_BASE = "http://localhost:8000/api/v1";
 
-  return NextResponse.json({ data: mockNotifications, error: null });
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const page = searchParams.get("page") || "1";
+  const per_page = searchParams.get("per_page") || "20";
+  const unread = searchParams.get("unread") || "";
+
+  try {
+    const params = new URLSearchParams({ page, per_page });
+    if (unread) params.set("unread", unread);
+
+    const response = await fetch(
+      `${BACKEND_BASE}/notifications?${params.toString()}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Backend responded with ${response.status}`);
+    }
+
+    const { data } = await response.json();
+    return NextResponse.json(data);
+  } catch (error: any) {
+    return NextResponse.json(
+      { notifications: [], total: 0, unreadCount: 0, page: 1, totalPages: 0, error: error.message || "Failed to fetch notifications" },
+      { status: 502 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-
-  return NextResponse.json({
-    data: {
-      id: "notif-new",
-      ...body,
-      createdAt: new Date().toISOString(),
-    },
-    error: null,
-  });
+  return NextResponse.json({ success: true, error: null });
 }

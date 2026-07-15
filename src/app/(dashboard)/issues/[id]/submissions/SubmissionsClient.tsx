@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchIssue, fetchSubmissions } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchIssue, fetchSubmissions, api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import SubmissionCard from "@/components/SubmissionCard";
 import Skeleton from "@/components/Skeleton";
@@ -18,7 +18,17 @@ type PartyTab = "all" | "complainant" | "respondent" | "third_party";
 
 export default function SubmissionsClient({ issueId }: SubmissionsClientProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<PartyTab>("all");
+
+  const handleSubmit = async (submissionId: string) => {
+    try {
+      await api.post(`/issues/${issueId}/submissions/${submissionId}/submit`, {});
+      queryClient.invalidateQueries({ queryKey: ["submissions", issueId] });
+    } catch (err) {
+      console.error("Failed to submit:", err);
+    }
+  };
 
   const { data: issue, isLoading: issueLoading } = useQuery({
     queryKey: ["issue", issueId],
@@ -132,8 +142,8 @@ export default function SubmissionsClient({ issueId }: SubmissionsClientProps) {
                         <SubmissionCard
                           key={sub.id}
                           submission={sub}
-                          onEdit={(id) => console.log("Edit", id)}
-                          onSubmit={(id) => console.log("Submit", id)}
+                          onEdit={(id) => router.push(`/dashboard/issues/${issueId}/submissions/${id}/edit`)}
+                          onSubmit={handleSubmit}
                         />
                       ))}
                     </div>
@@ -143,8 +153,8 @@ export default function SubmissionsClient({ issueId }: SubmissionsClientProps) {
                   <SubmissionCard
                     key={sub.id}
                     submission={sub}
-                    onEdit={(id) => console.log("Edit", id)}
-                    onSubmit={(id) => console.log("Submit", id)}
+                    onEdit={(id) => router.push(`/dashboard/issues/${issueId}/submissions/${id}/edit`)}
+                    onSubmit={handleSubmit}
                   />
                 ))}
           </div>

@@ -1,29 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const BACKEND_BASE = "http://localhost:8000/api/v1";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; reportId: string }> }
 ) {
   const { id, reportId } = await params;
 
-  const mockPublishedReport = {
-    id: reportId,
-    issueId: id,
-    title: "Published AI Report",
-    status: "published",
-    publishedAt: "2026-07-08T12:00:00Z",
-    publishedBy: "publisher_01",
-    content: {
-      executive_summary: "This is the published executive summary.",
-      key_findings: [
-        "Finding 1: Significant data trend identified.",
-        "Finding 2: Key metric shows improvement.",
-      ],
-      methodology: "AI-assisted analysis with human verification.",
-    },
-    pdfUrl: "/api/issues/" + id + "/reports/" + reportId + "/pdf",
-    htmlUrl: "/api/issues/" + id + "/reports/" + reportId + "/html",
-  };
+  try {
+    const response = await fetch(
+      `${BACKEND_BASE}/issues/${id}/ai-reports/${reportId}/published`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
 
-  return NextResponse.json({ data: mockPublishedReport, error: null });
+    if (!response.ok) {
+      throw new Error(`Backend responded with ${response.status}`);
+    }
+
+    const backendData = await response.json();
+    return NextResponse.json(backendData.data);
+  } catch (error: any) {
+    return NextResponse.json(
+      { data: null, error: error.message || "Failed to fetch published report" },
+      { status: 502 }
+    );
+  }
 }

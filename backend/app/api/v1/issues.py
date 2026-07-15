@@ -117,3 +117,62 @@ async def transition_issue(
         issue_id, transition, current_user.id, current_user.role
     )
     return {"data": IssueRead.model_validate(issue), "error": None}
+
+
+PIPELINE_STAGES = [
+    "collect", "normalize", "extract_facts", "retrieve_law",
+    "analyze_claims", "draft_intro", "draft_factual",
+    "draft_analysis", "draft_findings", "draft_recommendations",
+]
+
+
+@router.get("/{issue_id}/pipeline")
+async def get_pipeline(
+    issue_id: UUID = Path(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = IssueService(db)
+    issue = await service.get_issue(issue_id)
+
+    in_ai_phase = issue.current_status in ("ai_processing", "eb_review", "fact_checking", "final_revision", "final_published")
+
+    stages = {}
+    if in_ai_phase:
+        completed_count = 0
+        if issue.current_status == "ai_processing":
+            for stage in PIPELINE_STAGES:
+                stages[stage] = "running"
+            stages[PIPELINE_STAGES[0]] = "completed"
+        elif issue.current_status == "eb_review":
+            for stage in PIPELINE_STAGES:
+                stages[stage] = "completed"
+            completed_count = len(PIPELINE_STAGES)
+        elif issue.current_status in ("fact_checking", "final_revision", "final_published"):
+            for stage in PIPELINE_STAGES:
+                stages[stage] = "completed"
+            completed_count = len(PIPELINE_STAGES)
+        else:
+            for stage in PIPELINE_STAGES:
+                stages[stage] = "pending"
+    else:
+        for stage in PIPELINE_STAGES:
+            stages[stage] = "pending"
+
+    progress = round((completed_count / len(PIPELINE_STAGES)) * 100) if in_ai_phase else 0
+
+    from app.repositories.ai_report_repository import AIReportRepository
+    report_repo = AIReportRepository(db)
+    latest_report = await report_repo.get_latest_by_issue(issue_id)
+
+    return {
+        "data": {
+            "stages": stages,
+            "progress": progress,
+            "token_usage": 0,
+            "cost_estimate": 0,
+            "estimated_time_remaining": 0,
+            "report_id": str(latest_report.id) if latest_report else None,
+        },
+        "error": None,
+    }

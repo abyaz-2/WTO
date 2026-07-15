@@ -1,69 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const BACKEND_BASE = "http://localhost:8000/api/v1";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
 
-  const mockStages = [
-    {
-      id: "stage-001",
-      name: "Data Collection",
-      status: "completed",
-      progress: 100,
-      startedAt: "2026-07-01T09:00:00Z",
-      completedAt: "2026-07-02T17:00:00Z",
-    },
-    {
-      id: "stage-002",
-      name: "AI Analysis",
-      status: "completed",
-      progress: 100,
-      startedAt: "2026-07-02T17:00:00Z",
-      completedAt: "2026-07-03T12:00:00Z",
-    },
-    {
-      id: "stage-003",
-      name: "Report Generation",
-      status: "in_progress",
-      progress: 65,
-      startedAt: "2026-07-03T12:00:00Z",
-      completedAt: null,
-    },
-    {
-      id: "stage-004",
-      name: "Fact Checking",
-      status: "pending",
-      progress: 0,
-      startedAt: null,
-      completedAt: null,
-    },
-    {
-      id: "stage-005",
-      name: "Review",
-      status: "pending",
-      progress: 0,
-      startedAt: null,
-      completedAt: null,
-    },
-    {
-      id: "stage-006",
-      name: "Publication",
-      status: "pending",
-      progress: 0,
-      startedAt: null,
-      completedAt: null,
-    },
-  ];
+  try {
+    const response = await fetch(`${BACKEND_BASE}/issues/${id}/pipeline`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
 
-  return NextResponse.json({
-    data: {
-      issueId: id,
-      stages: mockStages,
-    },
-    error: null,
-  });
+    if (!response.ok) {
+      throw new Error(`Backend responded with ${response.status}`);
+    }
+
+    const { data } = await response.json();
+    return NextResponse.json(data);
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        stages: {},
+        progress: 0,
+        token_usage: 0,
+        cost_estimate: 0,
+        estimated_time_remaining: 0,
+        error: error.message || "Failed to fetch pipeline",
+      },
+      { status: 502 }
+    );
+  }
 }
 
 export async function POST(
@@ -71,15 +40,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await request.json();
 
   return NextResponse.json({
-    data: {
-      issueId: id,
-      retryStage: body.stageId || null,
-      status: "retry_initiated",
-      message: "Retry initiated for issue " + id + ".",
-    },
+    issueId: id,
+    status: "retry_initiated",
+    message: "Retry initiated for issue " + id + ".",
     error: null,
   });
 }
