@@ -22,7 +22,3 @@ class AIReportRead(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class AIReportGenerate(BaseModel):
-    pass

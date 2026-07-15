@@ -10,5 +10,4 @@ redis
 structlog
 python-jose[cryptography]
 python-multipart
-python-dotenv
 aiosqlite

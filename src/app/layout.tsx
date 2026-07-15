@@ -27,6 +27,8 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+import ErrorBoundary from "@/components/ErrorBoundary";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,7 +36,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={sora.variable}>
-      <body className="font-[family-name:var(--font-sora)]">{children}</body>
+      <body className="font-[family-name:var(--font-sora)]">
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </body>
     </html>
   );
 }

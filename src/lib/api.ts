@@ -90,17 +90,6 @@ class ApiClient {
 
 export const api = new ApiClient();
 
-export function buildQueryString(params: Record<string, string | number | boolean | undefined | null>): string {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      search.set(key, String(value));
-    }
-  });
-  const qs = search.toString();
-  return qs ? `?${qs}` : "";
-}
-
 export interface IssueListParams {
   page?: number;
   page_size?: number;
@@ -117,20 +106,12 @@ export function fetchIssue(id: string): Promise<import("@/lib/types").Issue> {
   return api.get(`/issues/${id}`);
 }
 
-export function createIssue(data: { title: string; description: string; respondent_id?: string }): Promise<import("@/lib/types").Issue> {
-  return api.post("/issues", data);
-}
-
 export function fetchParticipants(issueId: string): Promise<import("@/lib/types").Participant[]> {
   return api.get(`/issues/${issueId}/participants`);
 }
 
 export function fetchSubmissions(issueId: string): Promise<import("@/lib/types").Submission[]> {
   return api.get(`/issues/${issueId}/submissions`);
-}
-
-export function fetchEvidence(issueId: string): Promise<import("@/lib/types").Evidence[]> {
-  return api.get(`/issues/${issueId}/evidence`);
 }
 
 export function fetchUsers(): Promise<import("@/lib/types").User[]> {
@@ -145,9 +126,4 @@ export function createUser(data: {
   return api.post("/users", data);
 }
 
-export function searchIssueContent(
-  issueId: string,
-  params: { q: string; type?: string; entity_type?: string; page?: number }
-): Promise<PaginatedResponse<import("@/lib/types").Submission | import("@/lib/types").Evidence>> {
-  return api.get(`/issues/${issueId}/search`, params as Record<string, string | number | undefined>);
-}
+

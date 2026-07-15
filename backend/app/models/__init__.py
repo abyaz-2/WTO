@@ -8,7 +8,6 @@ from app.models.ai_report import AIReport
 from app.models.fact_check import FactCheck
 from app.models.revision import Revision
 from app.models.notification import Notification
-from app.models.audit_log import AuditLog
 from app.models.session import Session
 
 __all__ = [
@@ -23,6 +22,5 @@ __all__ = [
     "FactCheck",
     "Revision",
     "Notification",
-    "AuditLog",
     "Session",
 ]

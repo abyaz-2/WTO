@@ -144,7 +144,6 @@ export default function ParticipantList({ participants, issueStatus, issueId }: 
         isOpen={showRoleModal}
         onClose={() => setShowRoleModal(false)}
         onSelect={(role) => {
-          console.log("Register as", role, "for issue", issueId);
           setShowRoleModal(false);
         }}
       />
