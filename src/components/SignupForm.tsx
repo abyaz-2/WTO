@@ -3,6 +3,15 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 
+function formatError(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object") {
+    const obj = detail as Record<string, unknown>;
+    return String(obj.message || obj.detail || JSON.stringify(obj));
+  }
+  return "An unexpected error occurred.";
+}
+
 const ERROR_MESSAGES: Record<string, string> = {
   "Conflict": "A user with this email already exists.",
   "default": "An unexpected error occurred. Please try again.",
@@ -47,7 +56,7 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
       const body = await res.json();
 
       if (!res.ok) {
-        const message = body.detail || body.error || ERROR_MESSAGES.default;
+        const message = formatError(body.detail) || body.error || ERROR_MESSAGES.default;
         setError(message);
         setLoading(false);
         return;

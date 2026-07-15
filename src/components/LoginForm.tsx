@@ -9,12 +9,17 @@ interface LoginFormProps {
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
-  "invalid_credentials": "Invalid email or password. Please try again.",
-  "email_not_confirmed": "Please verify your email address before logging in.",
-  "user_not_found": "No account found with this email address.",
-  "rate_limit": "Too many attempts. Please wait a moment and try again.",
   "default": "An unexpected error occurred. Please try again.",
 };
+
+function formatError(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object") {
+    const obj = detail as Record<string, unknown>;
+    return String(obj.message || obj.detail || JSON.stringify(obj));
+  }
+  return "An unexpected error occurred.";
+}
 
 export default function LoginForm({ onSuccess }: LoginFormProps) {
   const [email, setEmail] = useState("");
@@ -28,15 +33,30 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      const res = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
-      if (authError) {
-        const code = authError.code || authError.message;
-        setError(ERROR_MESSAGES[code] || ERROR_MESSAGES.default);
+      const body = await res.json();
+
+      if (!res.ok) {
+        setError(formatError(body.detail) || ERROR_MESSAGES.default);
+        setLoading(false);
+        return;
+      }
+
+      const { access_token, refresh_token } = body.data;
+
+      const supabase = createClient();
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      });
+
+      if (sessionError) {
+        setError(ERROR_MESSAGES.default);
         setLoading(false);
         return;
       }

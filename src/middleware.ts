@@ -2,9 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/proxy";
 
 const DASHBOARD_ROUTES = ["/dashboard"];
-const AUTH_ROUTES = ["/", "/login"];
+const AUTH_ROUTES = ["/", "/login", "/signup"];
 
-export async function proxy(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const { supabase, supabaseResponse } = await createClient(request);
 
   const { data: { user } } = await supabase.auth.getUser();
