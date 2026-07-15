@@ -137,6 +137,14 @@ export function fetchUsers(): Promise<import("@/lib/types").User[]> {
   return api.get("/users");
 }
 
+export function createUser(data: {
+  email: string;
+  display_name: string;
+  role: string;
+}): Promise<import("@/lib/types").User> {
+  return api.post("/users", data);
+}
+
 export function searchIssueContent(
   issueId: string,
   params: { q: string; type?: string; entity_type?: string; page?: number }

@@ -29,6 +29,15 @@ class UserCreate(BaseModel):
         from_attributes = True
 
 
+class AdminUserCreate(BaseModel):
+    email: Annotated[str, StringConstraints(max_length=255)]
+    display_name: Annotated[str, StringConstraints(min_length=1, max_length=255)]
+    role: Annotated[str, StringConstraints(pattern=r"^(executive_board|delegate)$")]
+
+    class Config:
+        from_attributes = True
+
+
 class UserUpdate(BaseModel):
     display_name: Annotated[str, StringConstraints(min_length=1, max_length=255)] | None = None
     avatar_url: Annotated[str, StringConstraints(max_length=1024)] | None = None

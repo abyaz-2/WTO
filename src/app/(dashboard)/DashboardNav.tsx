@@ -7,6 +7,7 @@ import type { User } from "@supabase/supabase-js";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/issues", label: "Issues" },
+  { href: "/dashboard/users", label: "Users" },
 ];
 
 interface DashboardNavProps {
