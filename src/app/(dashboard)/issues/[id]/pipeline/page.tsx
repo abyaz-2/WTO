@@ -55,7 +55,7 @@ export default function PipelinePage(): ReactNode {
 
   const fetchPipeline = useCallback(async () => {
     try {
-      const res = await fetch(`/api/issues/${issueId}/pipeline`);
+      const res = await fetch(`/api/v1/issues/${issueId}/pipeline`);
       if (!res.ok) throw new Error("Failed to load pipeline status");
       const data = await res.json();
       setPipeline(data);
@@ -83,7 +83,7 @@ export default function PipelinePage(): ReactNode {
 
   async function retryStage(stage: PipelineStage) {
     try {
-      const res = await fetch(`/api/issues/${issueId}/pipeline/retry`, {
+      const res = await fetch(`/api/v1/issues/${issueId}/pipeline/retry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stage }),

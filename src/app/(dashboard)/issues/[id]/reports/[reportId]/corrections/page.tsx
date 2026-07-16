@@ -27,7 +27,7 @@ export default function CorrectionsDashboardPage(): ReactNode {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/issues/${issueId}/reports/${reportId}/corrections`);
+      const res = await fetch(`/api/v1/issues/${issueId}/ai-reports/${reportId}/fact-checks`);
       if (!res.ok) throw new Error("Failed to load corrections");
       const data = await res.json();
       setCorrections(data.corrections ?? []);
@@ -51,7 +51,7 @@ export default function CorrectionsDashboardPage(): ReactNode {
         body.eb_note = rejectNote.trim();
       }
       const res = await fetch(
-        `/api/issues/${issueId}/reports/${reportId}/corrections/${correctionId}`,
+        `/api/v1/issues/${issueId}/ai-reports/${reportId}/fact-checks/${correctionId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

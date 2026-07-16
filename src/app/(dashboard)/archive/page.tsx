@@ -38,7 +38,7 @@ export default function ArchivePage(): ReactNode {
         limit: String(ITEMS_PER_PAGE),
       });
       if (search.trim()) params.set("search", search.trim());
-      const res = await fetch(`/api/archive?${params.toString()}`);
+      const res = await fetch(`/api/v1/issues?status=archived&${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load archive");
       const data = await res.json();
       setData(data);

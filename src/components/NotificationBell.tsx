@@ -34,7 +34,7 @@ export default function NotificationBell({ userId }: NotificationBellProps): Rea
 
   async function fetchNotifications() {
     try {
-      const res = await fetch(`/api/notifications?userId=${userId}&limit=5`);
+      const res = await fetch(`/api/v1/notifications?userId=${userId}&limit=5`);
       if (!res.ok) return;
       const data = await res.json();
       setNotifications(data.notifications ?? []);

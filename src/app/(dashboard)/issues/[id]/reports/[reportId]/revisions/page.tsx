@@ -25,7 +25,7 @@ export default function RevisionsPage(): ReactNode {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/issues/${issueId}/reports/${reportId}/revisions`);
+      const res = await fetch(`/api/v1/revisions/ai_report/${reportId}`);
       if (!res.ok) throw new Error("Failed to load revisions");
       const data = await res.json();
       setRevisions(data.revisions ?? []);

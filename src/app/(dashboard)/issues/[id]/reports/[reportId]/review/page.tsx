@@ -38,7 +38,7 @@ export default function ReviewPage(): ReactNode {
     try {
       const [reportRes, statusRes] = await Promise.all([
         fetch(`/api/v1/issues/${issueId}/ai-reports/${reportId}`),
-        fetch(`/api/issues/${issueId}/reports/${reportId}/review/status`),
+        fetch(`/api/v1/issues/${issueId}/ai-reports/${reportId}/review/status`),
       ]);
       if (!reportRes.ok || !statusRes.ok) throw new Error("Failed to load review data");
       const reportData = await reportRes.json();
@@ -62,7 +62,7 @@ export default function ReviewPage(): ReactNode {
     setSubmitting(true);
     try {
       const res = await fetch(
-        `/api/issues/${issueId}/reports/${reportId}/review/approve`,
+        `/api/v1/issues/${issueId}/ai-reports/${reportId}/review/approve`,
         { method: "POST" }
       );
       if (!res.ok) throw new Error("Failed to submit approval");
@@ -92,7 +92,7 @@ export default function ReviewPage(): ReactNode {
     setCorrectionSubmitting(true);
     try {
       const res = await fetch(
-        `/api/issues/${issueId}/reports/${reportId}/corrections`,
+        `/api/v1/issues/${issueId}/ai-reports/${reportId}/fact-checks`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

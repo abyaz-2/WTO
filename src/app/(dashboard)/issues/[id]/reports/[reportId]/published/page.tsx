@@ -33,7 +33,7 @@ export default function PublishedReportPage(): ReactNode {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/issues/${issueId}/reports/${reportId}/published`);
+      const res = await fetch(`/api/v1/issues/${issueId}/ai-reports/${reportId}/published`);
       if (!res.ok) throw new Error("Failed to load published report");
       const data = await res.json();
       setReport(data.report ?? null);

@@ -32,7 +32,7 @@ export default function NotificationsPage(): ReactNode {
         limit: String(ITEMS_PER_PAGE),
       });
       if (filter === "unread") params.set("unread", "true");
-      const res = await fetch(`/api/notifications?${params.toString()}`);
+      const res = await fetch(`/api/v1/notifications?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load notifications");
       const data = await res.json();
       setData(data);
@@ -50,7 +50,7 @@ export default function NotificationsPage(): ReactNode {
   async function markAllRead() {
     setMarkingAll(true);
     try {
-      const res = await fetch("/api/notifications/read-all", { method: "POST" });
+      const res = await fetch("/api/v1/notifications/read-all", { method: "POST" });
       if (!res.ok) throw new Error("Failed");
       fetchNotifications();
     } catch {
