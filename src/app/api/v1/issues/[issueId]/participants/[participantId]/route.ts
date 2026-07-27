@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/middleware/auth";
 import { changeRole, removeParticipant } from "@/lib/services/participant";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 
 export async function PATCH(
   request: NextRequest,
@@ -12,7 +12,7 @@ export async function PATCH(
     const { issueId, participantId } = await params;
     const body = await request.json();
     const result = await changeRole(issueId, participantId, body.role, user.role);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }
@@ -26,7 +26,7 @@ export async function DELETE(
     const user = await getCurrentUser(request);
     const { issueId, participantId } = await params;
     const result = await removeParticipant(issueId, participantId, user.role);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }

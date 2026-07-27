@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/middleware/auth";
 import { getSignedUrl } from "@/lib/services/evidence";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { evidenceId } = body;
     const signedUrl = await getSignedUrl(evidenceId, user.id);
-    return Response.json(apiResponse({ signedUrl }));
+    return Response.json({ signedUrl });
   } catch (error) {
     return handleApiError(error);
   }

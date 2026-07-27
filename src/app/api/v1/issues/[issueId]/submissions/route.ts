@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/middleware/auth";
 import { createSubmission, listSubmissions } from "@/lib/services/submission";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 
 export async function GET(
   request: NextRequest,
@@ -11,7 +11,7 @@ export async function GET(
     const { issueId } = await params;
     const user = await getCurrentUser(request);
     const result = await listSubmissions(issueId, user.id, user.role);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }
@@ -27,7 +27,7 @@ export async function POST(
     const body = await request.json();
     const { participantId, submissionType, content } = body;
     const result = await createSubmission(issueId, participantId, submissionType, content || {}, user.id);
-    return Response.json(apiResponse(result), { status: 201 });
+    return Response.json(result, { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }

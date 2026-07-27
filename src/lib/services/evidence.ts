@@ -29,7 +29,12 @@ function validateFileName(filename: string): string {
 
 async function getSupabaseServiceClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_KEY!;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
+
+  if (!serviceKey) {
+    throw new ValidationError("Missing Supabase service role key");
+  }
+
   return { supabaseUrl, serviceKey };
 }
 

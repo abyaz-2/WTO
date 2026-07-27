@@ -45,13 +45,13 @@ export async function listNotifications(userId: string, page: number = 1, perPag
 
   const whereClause = and(...conditions);
 
-  const totalResult = await db
+  const [totalResult] = await db
     .select({ count: count() })
     .from(notifications)
     .where(whereClause);
-  const total = totalResult[0]?.count ?? 0;
+  const total = Number(totalResult?.count ?? 0);
 
-  const data = await db
+  const rows = await db
     .select()
     .from(notifications)
     .where(whereClause)
@@ -59,18 +59,30 @@ export async function listNotifications(userId: string, page: number = 1, perPag
     .limit(perPage)
     .offset((page - 1) * perPage);
 
-  const unreadResult = await db
+  const [unreadResult] = await db
     .select({ count: count() })
     .from(notifications)
     .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)));
-  const unreadCount = unreadResult[0]?.count ?? 0;
+  const unreadCount = Number(unreadResult?.count ?? 0);
+
+  const transformed = rows.map((n) => {
+    const content = (n.content ?? {}) as Record<string, unknown>;
+    return {
+      id: n.id,
+      type: n.type,
+      title: (content.title as string) ?? "",
+      body: (content.body as string) ?? "",
+      link: (content.link as string) ?? "",
+      read: n.readAt !== null,
+      created_at: n.createdAt,
+    };
+  });
 
   return {
-    data,
+    notifications: transformed,
     total,
-    page,
-    perPage,
-    totalPages: Math.ceil(total / perPage),
     unreadCount,
+    page,
+    totalPages: Math.ceil(total / perPage),
   };
 }

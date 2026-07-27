@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { factChecks, participants } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/middleware/auth";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
-import { NotFoundError, ForbiddenError } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
+import { NotFoundError } from "@/lib/services/errors";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ issueId: string; reportId: string }> }) {
   try {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         .set({ status: "approved", reviewedAt: new Date().toISOString() })
         .where(eq(factChecks.id, existing.id))
         .returning();
-      return Response.json(apiResponse(updated));
+      return Response.json(updated);
     }
 
     const [factCheck] = await db
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
       .returning();
 
-    return Response.json(apiResponse(factCheck), { status: 201 });
+    return Response.json(factCheck, { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }

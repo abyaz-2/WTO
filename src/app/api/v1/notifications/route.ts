@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { getCurrentUser, requireEb } from "@/lib/middleware/auth";
+import { getCurrentUser } from "@/lib/middleware/auth";
 import { listNotifications, createNotification } from "@/lib/services/notification";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const perPage = parseInt(searchParams.get("perPage") || "20", 10);
     const unreadOnly = searchParams.get("unread") === "true";
     const result = await listNotifications(user.id, page, perPage, unreadOnly || undefined);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       body.type,
       body.content,
     );
-    return Response.json(apiResponse(notification));
+    return Response.json(notification);
   } catch (error) {
     return handleApiError(error);
   }

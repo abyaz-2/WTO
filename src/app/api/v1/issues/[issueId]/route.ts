@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/middleware/auth";
 import { getIssue, updateIssue, archiveIssue } from "@/lib/services/issue";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 
 export async function GET(
   request: NextRequest,
@@ -11,7 +11,7 @@ export async function GET(
     await getCurrentUser(request);
     const { issueId } = await params;
     const result = await getIssue(issueId);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }
@@ -26,7 +26,7 @@ export async function PATCH(
     const { issueId } = await params;
     const body = await request.json();
     const result = await updateIssue(issueId, body, user.id);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }
@@ -40,7 +40,7 @@ export async function DELETE(
     const user = await getCurrentUser(request);
     const { issueId } = await params;
     const result = await archiveIssue(issueId, user.id);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }

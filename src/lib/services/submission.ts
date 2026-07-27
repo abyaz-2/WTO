@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { submissions, issues, participants, users } from "@/lib/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { NotFoundError, ForbiddenError, ValidationError } from "@/lib/services/errors";
 
 export async function createSubmission(

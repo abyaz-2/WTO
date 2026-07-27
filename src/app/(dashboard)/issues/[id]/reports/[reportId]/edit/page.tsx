@@ -5,14 +5,12 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ReportVersion, ReportSection } from "@/lib/types";
-import ConfidenceBadge from "@/components/ConfidenceBadge";
 
 interface EditableSection {
   id: string;
   title: string;
   content: string;
   originalContent: string;
-  confidence: number;
   hasChanges: boolean;
   saving: boolean;
   reverted: boolean;
@@ -81,7 +79,6 @@ export default function ReportEditPage(): ReactNode {
             title: s.title,
             content: s.content,
             originalContent: s.content,
-            confidence: s.confidence,
             hasChanges: false,
             saving: false,
             reverted: false,
@@ -298,7 +295,6 @@ export default function ReportEditPage(): ReactNode {
                 <div className="flex items-center justify-between px-5 py-3 border-b border-[rgba(255,255,255,0.06)]">
                   <div className="flex items-center gap-3">
                     <h3 className="text-sm font-semibold text-white">{section.title}</h3>
-                    <ConfidenceBadge score={section.confidence} className="scale-[0.85]" />
                     {section.hasChanges && (
                       <span className="text-[10px] font-medium text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-[4px]">
                         Unsaved

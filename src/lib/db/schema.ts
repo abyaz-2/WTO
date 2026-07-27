@@ -107,7 +107,7 @@ export const aiReports = pgTable(
     content: jsonb().default("{}"),
     confidenceScore: numeric({ precision: 4, scale: 3 }),
     executiveSummary: text(),
-    status: text().notNull().default("generating"),
+    status: text().notNull().default("draft"),
     generatedBy: uuid().references(() => users.id),
     publishedUrl: text(),
     metadata: jsonb().default("{}"),

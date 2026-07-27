@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import type { ReportSection as ReportSectionType } from "@/lib/types";
 import { motion } from "framer-motion";
-import ConfidenceBadge from "./ConfidenceBadge";
 
 interface ReportSectionProps {
   section: ReportSectionType;
@@ -28,10 +27,7 @@ export default function ReportSectionComponent({
       className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#0B2345] overflow-hidden"
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.08)]">
-        <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-white tracking-tight">{section.title}</h3>
-          <ConfidenceBadge score={section.confidence} />
-        </div>
+        <h3 className="text-sm font-semibold text-white tracking-tight">{section.title}</h3>
         <div className="flex items-center gap-2">
           {editable && onEdit && (
             <button
@@ -62,7 +58,7 @@ export default function ReportSectionComponent({
           </div>
         ))}
 
-        {section.citations.length > 0 && (
+        {section.citations?.length > 0 && (
           <div className="mt-4 pt-4 border-t border-[rgba(255,255,255,0.06)]">
             <p className="text-[11px] font-medium tracking-wider uppercase text-[#7D8DA0] mb-2">Citations</p>
             <div className="flex flex-wrap gap-2">

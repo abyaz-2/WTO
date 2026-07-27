@@ -24,7 +24,11 @@ export async function createUser(data: {
   const tempPassword = crypto.randomBytes(12).toString("hex");
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
+
+  if (!supabaseServiceKey) {
+    throw new ValidationError("Missing Supabase service role key");
+  }
 
   const response = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
     method: "POST",

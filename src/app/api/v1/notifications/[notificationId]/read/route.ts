@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/middleware/auth";
 import { markRead } from "@/lib/services/notification";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 
 export async function POST(
   request: NextRequest,
@@ -11,7 +11,7 @@ export async function POST(
     const user = await getCurrentUser(request);
     const { notificationId } = await params;
     const result = await markRead(notificationId, user.id);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }

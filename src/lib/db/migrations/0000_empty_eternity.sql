@@ -7,7 +7,7 @@ CREATE TABLE "ai_reports" (
 	"content" jsonb DEFAULT '{}',
 	"confidenceScore" numeric(4, 3),
 	"executiveSummary" text,
-	"status" text DEFAULT 'generating' NOT NULL,
+	"status" text DEFAULT 'draft' NOT NULL,
 	"generatedBy" uuid,
 	"publishedUrl" text,
 	"metadata" jsonb DEFAULT '{}',

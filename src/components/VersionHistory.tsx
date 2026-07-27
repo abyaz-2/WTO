@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import type { ReportVersion } from "@/lib/types";
 import { motion } from "framer-motion";
-import ConfidenceBadge from "./ConfidenceBadge";
 import Link from "next/link";
 
 interface VersionHistoryProps {
@@ -17,8 +16,6 @@ function getStatusBadge(status: string): { label: string; color: string; bg: str
   switch (status) {
     case "draft":
       return { label: "Draft", color: "text-gray-400", bg: "bg-gray-500/10" };
-    case "generating":
-      return { label: "Generating", color: "text-[#6CA9FF]", bg: "bg-[#1E6FE8]/10" };
     case "review":
       return { label: "Review", color: "text-amber-400", bg: "bg-amber-500/10" };
     case "correction":
@@ -87,7 +84,6 @@ export default function VersionHistory({
                     minute: "2-digit",
                   })}
                 </span>
-                <ConfidenceBadge score={version.confidence.overall} dimensions={version.confidence.dimensions} className="scale-[0.85]" />
               </div>
               <div className="flex items-center gap-2">
                 <Link

@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import type { ReportVersion, ReportSection } from "@/lib/types";
-import ConfidenceBadge from "@/components/ConfidenceBadge";
 import CorrectionRequest from "@/components/CorrectionRequest";
 
 interface PartyStatus {
@@ -209,28 +208,26 @@ export default function ReviewPage(): ReactNode {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3 space-y-6">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#0B2345] p-6"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-white tracking-tight">Executive Summary</h2>
-                <ConfidenceBadge score={report.confidence.overall} dimensions={report.confidence.dimensions} />
-              </div>
-              <p className="text-sm text-[#B6C3D1] leading-relaxed">{report.executive_summary}</p>
-            </motion.div>
+            {report.executive_summary && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#0B2345] p-6"
+              >
+                <h2 className="text-sm font-semibold text-white tracking-tight mb-3">Executive Summary</h2>
+                <p className="text-sm text-[#B6C3D1] leading-relaxed">{report.executive_summary}</p>
+              </motion.div>
+            )}
 
-            {report.sections.map((section) => (
+            {report.sections?.map((section) => (
               <div
                 key={section.id}
                 data-section-id={section.id}
                 data-section-title={section.title}
                 className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#0B2345] overflow-hidden"
               >
-                <div className="px-6 py-4 border-b border-[rgba(255,255,255,0.08)] flex items-center gap-3">
+                <div className="px-6 py-4 border-b border-[rgba(255,255,255,0.08)]">
                   <h3 className="text-sm font-semibold text-white">{section.title}</h3>
-                  <ConfidenceBadge score={section.confidence} />
                 </div>
                 <div className="px-6 py-5">
                   <p className="text-sm text-[#B6C3D1] leading-relaxed whitespace-pre-wrap select-text">

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { aiReports } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/middleware/auth";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 import { NotFoundError } from "@/lib/services/errors";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ issueId: string; reportId: string }> }) {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .limit(1);
     if (!report) throw new NotFoundError("Published report");
 
-    return Response.json(apiResponse(report));
+    return Response.json(report);
   } catch (error) {
     return handleApiError(error);
   }

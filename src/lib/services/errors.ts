@@ -1,3 +1,25 @@
+function toSnakeCase(str: string): string {
+  return str.replace(/([A-Z])/g, "_$1").toLowerCase().replace(/^_/, "");
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && !(value instanceof Date);
+}
+
+function deepConvertKeys<T>(value: T): T {
+  if (isPlainObject(value)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value)) {
+      result[toSnakeCase(key)] = deepConvertKeys(val);
+    }
+    return result as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map(deepConvertKeys) as T;
+  }
+  return value;
+}
+
 export class AppError extends Error {
   constructor(
     message: string,
@@ -41,7 +63,7 @@ export class UnauthorizedError extends AppError {
 }
 
 export function apiResponse<T>(data: T) {
-  return { data, error: null };
+  return { data: deepConvertKeys(data), error: null };
 }
 
 export function apiError(error: AppError) {

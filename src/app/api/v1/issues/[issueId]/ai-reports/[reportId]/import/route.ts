@@ -1,15 +1,15 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/middleware/auth";
-import { submitFactCheck } from "@/lib/services/fact-check";
+import { importReportContent } from "@/lib/services/report";
 import { handleApiError } from "@/lib/services/errors";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ issueId: string; reportId: string }> }) {
   try {
     const auth = await getCurrentUser(request);
-    const { reportId } = await params;
+    const { issueId, reportId } = await params;
     const body = await request.json();
-    const result = await submitFactCheck(reportId, body.participantId, body, auth.id);
-    return Response.json(result, { status: 201 });
+    const result = await importReportContent(issueId, reportId, body.content, auth.id);
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }

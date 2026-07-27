@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/middleware/auth";
 import { listParticipants, registerParticipant } from "@/lib/services/participant";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 
 export async function GET(
   request: NextRequest,
@@ -11,7 +11,7 @@ export async function GET(
     await getCurrentUser(request);
     const { issueId } = await params;
     const result = await listParticipants(issueId);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }
@@ -26,7 +26,7 @@ export async function POST(
     const { issueId } = await params;
     const body = await request.json();
     const result = await registerParticipant(issueId, body.userId, body.role, user.role);
-    return Response.json(apiResponse(result), { status: 201 });
+    return Response.json(result, { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }

@@ -5,13 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import type { ReportVersion } from "@/lib/types";
-import ConfidenceBadge from "@/components/ConfidenceBadge";
 
 interface ReportListItem {
   id: string;
   version: number;
   status: string;
-  confidence: number;
   executive_summary: string;
   created_at: string;
 }
@@ -24,7 +22,6 @@ export default function ReportsListPage(): ReactNode {
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
   const [issueTitle, setIssueTitle] = useState("");
 
   useEffect(() => {
@@ -47,24 +44,9 @@ export default function ReportsListPage(): ReactNode {
     }
   }
 
-  async function generateReport() {
-    setGenerating(true);
-    try {
-      const res = await fetch(`/api/v1/issues/${issueId}/ai-reports/generate`, { method: "POST" });
-      if (!res.ok) throw new Error("Failed to start generation");
-      const data = await res.json();
-      router.push(`/dashboard/issues/${issueId}/pipeline`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate report");
-    } finally {
-      setGenerating(false);
-    }
-  }
-
   function getStatusBadge(status: string): { label: string; color: string; bg: string } {
     switch (status) {
       case "draft": return { label: "Draft", color: "text-gray-400", bg: "bg-gray-500/10" };
-      case "generating": return { label: "Generating", color: "text-[#6CA9FF]", bg: "bg-[#1E6FE8]/10" };
       case "review": return { label: "Review", color: "text-amber-400", bg: "bg-amber-500/10" };
       case "correction": return { label: "Corrections", color: "text-orange-400", bg: "bg-orange-500/10" };
       case "approved": return { label: "Approved", color: "text-green-400", bg: "bg-green-500/10" };
@@ -123,31 +105,21 @@ export default function ReportsListPage(): ReactNode {
               {reports.length} version{reports.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <button
-            onClick={generateReport}
-            disabled={generating}
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-[#1E6FE8] rounded-[8px] hover:bg-[#1A5FC4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center gap-2"
+          <Link
+            href={`/dashboard/issues/${issueId}/prompt`}
+            className="px-5 py-2.5 text-sm font-semibold text-white bg-[#1E6FE8] rounded-[8px] hover:bg-[#1A5FC4] transition-colors duration-200 flex items-center gap-2"
           >
-            {generating ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Generate New Report
-              </>
-            )}
-          </button>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Build Report Prompt
+          </Link>
         </div>
 
         {reports.length === 0 ? (
           <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#0B2345] p-12 text-center">
             <p className="text-sm text-[#7D8DA0]">No reports yet</p>
-            <p className="text-xs text-[#7D8DA0] mt-2">Click &quot;Generate New Report&quot; to start the AI pipeline.</p>
+            <p className="text-xs text-[#7D8DA0] mt-2">Build a prompt from the issue submissions to create your first report.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -178,16 +150,13 @@ export default function ReportsListPage(): ReactNode {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <ConfidenceBadge score={report.confidence} />
-                        <span className="text-xs text-[#7D8DA0]">
-                          {new Date(report.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </span>
-                      </div>
+                      <span className="text-xs text-[#7D8DA0] shrink-0">
+                        {new Date(report.created_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
                     </div>
                   </Link>
                 </motion.div>

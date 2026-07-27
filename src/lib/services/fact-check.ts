@@ -38,7 +38,7 @@ export async function submitFactCheck(aiReportId: string, participantId: string,
   return factCheck;
 }
 
-export async function reviewFactCheck(factCheckId: string, data: { status: string; comments?: Record<string, unknown>[] }, userId: string) {
+export async function reviewFactCheck(factCheckId: string, data: { status: string; comments?: Record<string, unknown>[] }) {
   const [fc] = await db.select().from(factChecks).where(eq(factChecks.id, factCheckId)).limit(1);
   if (!fc) throw new NotFoundError("Fact check");
 

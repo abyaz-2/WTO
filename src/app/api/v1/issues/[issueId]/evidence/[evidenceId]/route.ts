@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/middleware/auth";
 import { deleteEvidence } from "@/lib/services/evidence";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 
 export async function DELETE(
   request: NextRequest,
@@ -11,7 +11,7 @@ export async function DELETE(
     const { issueId, evidenceId } = await params;
     const user = await getCurrentUser(request);
     const result = await deleteEvidence(issueId, evidenceId, user.id, user.role);
-    return Response.json(apiResponse(result));
+    return Response.json(result);
   } catch (error) {
     return handleApiError(error);
   }

@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { aiReports, factChecks, participants, users, issues } from "@/lib/db/schema";
+import { aiReports, factChecks, participants, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/middleware/auth";
-import { handleApiError, apiResponse } from "@/lib/services/errors";
+import { handleApiError } from "@/lib/services/errors";
 import { NotFoundError } from "@/lib/services/errors";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ issueId: string; reportId: string }> }) {
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       };
     });
 
-    return Response.json(apiResponse({ report, reviewStatus }));
+    return Response.json({ report, reviewStatus });
   } catch (error) {
     return handleApiError(error);
   }

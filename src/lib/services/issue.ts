@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { issues, participants, revisions } from "@/lib/db/schema";
+import { issues, participants, revisions, users } from "@/lib/db/schema";
 import { eq, and, ilike, count, desc } from "drizzle-orm";
 import { NotFoundError, ForbiddenError, ValidationError } from "@/lib/services/errors";
 import crypto from "crypto";
@@ -13,8 +13,7 @@ export const VALID_TRANSITIONS: Record<string, string[]> = {
   registration_open: ["registration_closed"],
   registration_closed: ["submission_phase"],
   submission_phase: ["evidence_phase"],
-  evidence_phase: ["ai_processing"],
-  ai_processing: ["eb_review"],
+  evidence_phase: ["eb_review"],
   eb_review: ["fact_checking", "draft"],
   fact_checking: ["final_revision", "eb_review"],
   final_revision: ["final_published"],
@@ -31,7 +30,6 @@ const TRANSITION_PERMISSIONS: Record<string, string> = {
   registration_closed: "eb",
   submission_phase: "eb",
   evidence_phase: "eb",
-  ai_processing: "system",
   eb_review: "eb",
   fact_checking: "eb",
   final_revision: "eb",
@@ -135,7 +133,7 @@ export async function listIssues(
     data,
     total,
     page,
-    perPage,
+    pageSize: perPage,
     totalPages: Math.ceil(total / perPage),
   };
 }
@@ -284,4 +282,63 @@ export async function archiveIssue(issueId: string, userId: string) {
     .returning();
 
   return updated;
+}
+
+export async function listArchiveIssues(page: number = 1, perPage: number = 12, search?: string) {
+  const conditions = [eq(issues.currentStatus, "archived")];
+
+  if (search) {
+    conditions.push(ilike(issues.title, `%${search}%`));
+  }
+
+  const whereClause = and(...conditions);
+
+  const [totalResult] = await db
+    .select({ value: count() })
+    .from(issues)
+    .where(whereClause);
+  const total = Number(totalResult?.value ?? 0);
+
+  const rows = await db
+    .select()
+    .from(issues)
+    .where(whereClause)
+    .orderBy(desc(issues.updatedAt))
+    .limit(perPage)
+    .offset((page - 1) * perPage);
+
+  const disputes = await Promise.all(
+    rows.map(async (issue) => {
+      const participantRows = await db
+        .select({ displayName: users.displayName })
+        .from(participants)
+        .innerJoin(users, eq(participants.userId, users.id))
+        .where(eq(participants.issueId, issue.id));
+
+      const timeline = (issue.timeline ?? []) as Array<Record<string, unknown>>;
+
+      const publishedEntry = timeline.find(
+        (t) => t.type === "status_change" && (t.title as string)?.includes("to final_published"),
+      );
+      const archivedEntry = timeline.find(
+        (t) => t.type === "status_change" && (t.title as string)?.includes("to archived"),
+      );
+
+      return {
+        id: issue.id,
+        number: issue.issueNumber,
+        title: issue.title,
+        parties: participantRows.map((p) => p.displayName),
+        published_at: (publishedEntry?.created_at as string) ?? issue.createdAt,
+        archived_at: (archivedEntry?.created_at as string) ?? issue.updatedAt,
+      };
+    }),
+  );
+
+  return {
+    disputes,
+    total,
+    page,
+    totalPages: Math.ceil(total / perPage),
+  };
 }

@@ -104,26 +104,11 @@ export interface PaginatedResponse<T> {
   total_pages: number;
 }
 
-export type PipelineStage =
-  | "collect"
-  | "normalize"
-  | "extract_facts"
-  | "retrieve_law"
-  | "analyze_claims"
-  | "draft_intro"
-  | "draft_factual"
-  | "draft_analysis"
-  | "draft_findings"
-  | "draft_recommendations";
-
-export type PipelineStatus = "pending" | "running" | "completed" | "failed" | "retrying";
-
 export interface ReportSection {
   id: string;
   type: "introduction" | "factual_aspects" | "parties_requests" | "legal_analysis" | "findings" | "recommendations";
   title: string;
   content: string;
-  confidence: number;
   citations: Array<{ id: string; source: string; url?: string; type: string }>;
   editable: boolean;
   word_count: number;
@@ -135,9 +120,8 @@ export interface ReportVersion {
   version: number;
   status: string;
   sections: ReportSection[];
-  confidence: { overall: number; dimensions: Record<string, number>; per_section: Array<{ section_title: string; score: number }> };
   executive_summary: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   created_by: string;
