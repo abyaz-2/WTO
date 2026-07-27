@@ -29,13 +29,19 @@ function RoleBadge({ role }: { role: string }) {
 
 interface AddUserFormData {
   email: string;
-  display_name: string;
+  country: string;
   role: "executive_board" | "delegate";
 }
+
+type CreatedUserResult = {
+  user: import("@/lib/types").User;
+  tempPassword: string;
+};
 
 function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdUser, setCreatedUser] = useState<CreatedUserResult | null>(null);
 
   const {
     register,
@@ -48,10 +54,10 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
 
   const mutation = useMutation({
     mutationFn: createUser,
-    onSuccess: () => {
+    onSuccess: (result: CreatedUserResult) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       reset();
-      onClose();
+      setCreatedUser(result);
     },
     onError: (err: Error) => {
       setSubmitError(err.message);
@@ -63,8 +69,56 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
     mutation.mutate(data);
   };
 
+  const handleClose = () => {
+    setCreatedUser(null);
+    setSubmitError(null);
+    reset({ role: "delegate" });
+    onClose();
+  };
+
   return (
-    <Modal open={open} onClose={onClose} title="Add User">
+    <Modal open={open} onClose={handleClose} title="Admin Access">
+      {createdUser ? (
+        <div className="space-y-4">
+          <div className="rounded-[10px] border border-green-500/20 bg-green-500/10 p-4">
+            <p className="text-sm font-medium text-green-300">User created</p>
+            <p className="text-xs text-[#B6C3D1] mt-1">
+              The temporary password is shown once. Copy it now and share it securely.
+            </p>
+          </div>
+
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#7D8DA0] mb-1">Email</p>
+              <p className="text-white">{createdUser.user.email}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#7D8DA0] mb-1">Country</p>
+              <p className="text-white">{createdUser.user.country ?? "-"}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#7D8DA0] mb-1">Temporary Password</p>
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={createdUser.tempPassword}
+                  className="flex-1 px-3 py-2 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white rounded-[8px]"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-6 py-2.5 text-sm font-medium text-white bg-[#1E6FE8] hover:bg-[#1A5FC8] rounded-[8px] transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-white mb-1.5">
@@ -86,22 +140,22 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
         </div>
 
         <div>
-          <label htmlFor="display_name" className="block text-sm font-medium text-white mb-1.5">
-            Display Name
+          <label htmlFor="country" className="block text-sm font-medium text-white mb-1.5">
+            Country
           </label>
           <input
-            id="display_name"
+            id="country"
             type="text"
-            placeholder="John Doe"
-            {...register("display_name", {
-              required: "Display name is required",
-              minLength: { value: 1, message: "Display name is required" },
-              maxLength: { value: 255, message: "Display name too long" },
+            placeholder="Kenya"
+            {...register("country", {
+              required: "Country is required",
+              minLength: { value: 2, message: "Country is required" },
+              maxLength: { value: 255, message: "Country too long" },
             })}
             className="w-full px-4 py-2.5 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white placeholder-[#7D8DA0] rounded-[8px] focus:outline-none focus:border-[rgba(30,111,232,0.5)] focus:ring-1 focus:ring-[rgba(30,111,232,0.3)] transition-all"
           />
-          {errors.display_name && (
-            <p className="text-xs text-red-400 mt-1">{errors.display_name.message}</p>
+          {errors.country && (
+            <p className="text-xs text-red-400 mt-1">{errors.country.message}</p>
           )}
         </div>
 
@@ -145,6 +199,7 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
           </button>
         </div>
       </form>
+      )}
     </Modal>
   );
 }
@@ -212,6 +267,7 @@ export default function UserDirectory() {
               <tr className="border-b border-[rgba(255,255,255,0.06)]">
                 <th className="text-left px-5 py-3 text-xs font-semibold tracking-wider uppercase text-[#7D8DA0]">User</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold tracking-wider uppercase text-[#7D8DA0]">Email</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold tracking-wider uppercase text-[#7D8DA0]">Country</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold tracking-wider uppercase text-[#7D8DA0]">Role</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold tracking-wider uppercase text-[#7D8DA0]">Status</th>
               </tr>
@@ -239,6 +295,7 @@ export default function UserDirectory() {
                     </div>
                   </td>
                   <td className="px-5 py-4 text-sm text-[#B6C3D1]">{user.email}</td>
+                  <td className="px-5 py-4 text-sm text-[#B6C3D1]">{user.country ?? "-"}</td>
                   <td className="px-5 py-4">
                     <RoleBadge role={user.role} />
                   </td>

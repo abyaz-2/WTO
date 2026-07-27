@@ -118,11 +118,16 @@ export function fetchUsers(): Promise<import("@/lib/types").User[]> {
   return api.get("/users");
 }
 
+export interface CreateUserResponse {
+  user: import("@/lib/types").User;
+  tempPassword: string;
+}
+
 export function createUser(data: {
   email: string;
-  display_name: string;
+  country: string;
   role: string;
-}): Promise<import("@/lib/types").User> {
+}): Promise<CreateUserResponse> {
   return api.post("/users", data);
 }
 

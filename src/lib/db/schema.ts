@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   supabaseId: text().notNull().unique(),
   email: text().notNull().unique(),
   displayName: text().notNull(),
+  country: text(),
   avatarUrl: text(),
   role: text().notNull(),
   isActive: boolean().default(true),

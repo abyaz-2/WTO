@@ -1,11 +1,16 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser, requireEb } from "@/lib/middleware/auth";
+import { isAdminEmail } from "@/lib/auth";
 import { listUsers, createUser } from "@/lib/services/user";
 import { handleApiError } from "@/lib/services/errors";
 
 export async function GET(request: NextRequest) {
   try {
-    const _user = await getCurrentUser(request);
+    const user = await getCurrentUser(request);
+    requireEb(user);
+    if (!isAdminEmail(user.email)) {
+      return Response.json({ error: { message: "Forbidden" } }, { status: 403 });
+    }
     const result = await listUsers();
     return Response.json(result);
   } catch (error) {
@@ -17,6 +22,9 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
     requireEb(user);
+    if (!isAdminEmail(user.email)) {
+      return Response.json({ error: { message: "Forbidden" } }, { status: 403 });
+    }
     const body = await request.json();
     const result = await createUser(body);
     return Response.json(result, { status: 201 });

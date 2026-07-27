@@ -1,8 +1,8 @@
-import { requireAuth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import UserDirectory from "./UserDirectory";
 
 export default async function UsersPage() {
-  await requireAuth();
+  await requireAdmin();
 
   return (
     <div className="p-6 sm:p-8 lg:p-10">

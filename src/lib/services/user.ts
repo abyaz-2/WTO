@@ -8,7 +8,7 @@ export type UserRole = "executive_board" | "delegate";
 
 export async function createUser(data: {
   email: string;
-  displayName: string;
+  country: string;
   role: UserRole;
 }) {
   const [existing] = await db
@@ -22,6 +22,7 @@ export async function createUser(data: {
   }
 
   const tempPassword = crypto.randomBytes(12).toString("hex");
+  const displayName = data.email.split("@")[0];
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
@@ -41,7 +42,7 @@ export async function createUser(data: {
       email: data.email,
       password: tempPassword,
       email_confirm: true,
-      user_metadata: { role: data.role, display_name: data.displayName },
+      user_metadata: { role: data.role, display_name: displayName, country: data.country },
     }),
   });
 
@@ -57,7 +58,8 @@ export async function createUser(data: {
     .values({
       supabaseId: supabaseUser.id,
       email: data.email,
-      displayName: data.displayName,
+      displayName,
+      country: data.country,
       role: data.role,
       isActive: true,
     })

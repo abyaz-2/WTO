@@ -15,6 +15,39 @@ export async function requireAuth() {
   return user;
 }
 
+export async function requireEb() {
+  const user = await requireAuth();
+  if (getRole(user) !== "executive_board") {
+    redirect("/dashboard");
+  }
+  return user;
+}
+
+function getAdminEmails(): string[] {
+  const configuredEmails =
+    process.env.ADMIN_EMAILS ??
+    process.env.ADMIN_EMAIL ??
+    "abyazashiq@gmail.com";
+  return configuredEmails
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function isAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return getAdminEmails().includes(email.toLowerCase());
+}
+
+export async function requireAdmin() {
+  const user = await requireAuth();
+  if (!isAdminEmail(user.email)) {
+    redirect("/dashboard");
+  }
+
+  return user;
+}
+
 export async function requireGuest() {
   const user = await getUser();
   if (user) {

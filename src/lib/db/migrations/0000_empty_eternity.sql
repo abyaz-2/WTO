@@ -121,6 +121,7 @@ CREATE TABLE "users" (
 	"supabaseId" text NOT NULL,
 	"email" text NOT NULL,
 	"displayName" text NOT NULL,
+	"country" text,
 	"avatarUrl" text,
 	"role" text NOT NULL,
 	"isActive" boolean DEFAULT true,

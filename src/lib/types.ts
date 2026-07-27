@@ -27,6 +27,7 @@ export interface User {
   supabase_id: string;
   email: string;
   display_name: string;
+  country?: string;
   avatar_url?: string;
   role: UserRole;
   is_active: boolean;

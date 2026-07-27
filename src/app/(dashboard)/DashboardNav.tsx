@@ -5,11 +5,15 @@ import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import NotificationBell from "@/components/NotificationBell";
 
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "abyazashiq@gmail.com")
+  .split(",")
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/issues", label: "Issues" },
   { href: "/dashboard/notifications", label: "Notifications" },
-  { href: "/dashboard/users", label: "Users" },
 ];
 
 interface DashboardNavProps {
@@ -18,6 +22,11 @@ interface DashboardNavProps {
 
 export default function DashboardNav({ user }: DashboardNavProps) {
   const pathname = usePathname();
+  const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase() ?? "");
+
+  const items = isAdmin
+    ? NAV_ITEMS.concat({ href: "/dashboard/users", label: "Users" })
+    : NAV_ITEMS;
 
   return (
     <aside className="w-60 min-h-screen border-r border-[rgba(255,255,255,0.06)] bg-[#05162D] flex flex-col">
@@ -30,7 +39,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
       </div>
 
       <nav className="flex-1 px-4 py-6 flex flex-col gap-1">
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
