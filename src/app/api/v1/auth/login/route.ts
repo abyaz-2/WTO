@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { handleApiError, apiResponse, ValidationError, UnauthorizedError } from "@/lib/services/errors";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,17 +13,24 @@ export async function POST(request: NextRequest) {
       throw new ValidationError("Email and password are required");
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseAnonKey = getSupabaseAnonKey();
 
-    const loginRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: supabaseAnonKey,
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    let loginRes: Response;
+    try {
+      loginRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseAnonKey,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      throw new ValidationError(
+        `Unable to reach Supabase at ${supabaseUrl}. Check SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL.`,
+      );
+    }
 
     if (!loginRes.ok) {
       const err = await loginRes.json();
@@ -31,10 +39,14 @@ export async function POST(request: NextRequest) {
 
     const session = await loginRes.json();
 
-    await db
-      .update(users)
-      .set({ lastLoginAt: new Date().toISOString() })
-      .where(eq(users.supabaseId, session.user.id));
+    try {
+      await db
+        .update(users)
+        .set({ lastLoginAt: new Date().toISOString() })
+        .where(eq(users.supabaseId, session.user.id));
+    } catch (dbError) {
+      console.warn("Failed to update lastLoginAt after successful Supabase login", dbError);
+    }
 
     return Response.json(
       apiResponse({

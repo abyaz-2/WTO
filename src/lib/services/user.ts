@@ -1,15 +1,16 @@
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import crypto from "crypto";
-import { NotFoundError, ConflictError, ValidationError } from "./errors";
+import { NotFoundError, ConflictError, ValidationError, ForbiddenError } from "./errors";
+import { getSupabaseUrl } from "@/lib/supabase/config";
 
 export type UserRole = "executive_board" | "delegate";
 
 export async function createUser(data: {
   email: string;
   country: string;
-  role: UserRole;
+  password: string;
+  role?: UserRole;
 }) {
   const [existing] = await db
     .select()
@@ -20,11 +21,9 @@ export async function createUser(data: {
   if (existing) {
     throw new ConflictError("Email already registered");
   }
-
-  const tempPassword = crypto.randomBytes(12).toString("hex");
   const displayName = data.email.split("@")[0];
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseUrl = getSupabaseUrl();
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
 
   if (!supabaseServiceKey) {
@@ -40,9 +39,9 @@ export async function createUser(data: {
     },
     body: JSON.stringify({
       email: data.email,
-      password: tempPassword,
+      password: data.password,
       email_confirm: true,
-      user_metadata: { role: data.role, display_name: displayName, country: data.country },
+      user_metadata: { role: data.role ?? "delegate", display_name: displayName, country: data.country },
     }),
   });
 
@@ -60,12 +59,51 @@ export async function createUser(data: {
       email: data.email,
       displayName,
       country: data.country,
-      role: data.role,
+      role: data.role ?? "delegate",
       isActive: true,
     })
     .returning();
 
-  return { user, tempPassword };
+  return { user };
+}
+
+export async function deleteUser(userId: string, currentUserId: string) {
+  if (userId === currentUserId) {
+    throw new ForbiddenError("You cannot remove your own admin account");
+  }
+
+  const [existing] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!existing) {
+    throw new NotFoundError("User");
+  }
+
+  const supabaseUrl = getSupabaseUrl();
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
+
+  if (!supabaseServiceKey) {
+    throw new ValidationError("Missing Supabase service role key");
+  }
+
+  const authDeleteRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${existing.supabaseId}`, {
+    method: "DELETE",
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+    },
+  });
+
+  if (!authDeleteRes.ok) {
+    const err = await authDeleteRes.json().catch(() => ({}));
+    throw new ValidationError(err.msg || err.error_description || "Failed to remove user from Supabase Auth");
+  }
+
+  const [updated] = await db
+    .update(users)
+    .set({ isActive: false, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, userId))
+    .returning();
+
+  return updated;
 }
 
 export async function getUser(userId: string) {

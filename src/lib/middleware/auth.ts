@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { UnauthorizedError, ForbiddenError } from "@/lib/services/errors";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 
 export interface AuthUser {
   id: string;
@@ -21,8 +22,8 @@ export async function getCurrentUser(request: NextRequest): Promise<AuthUser> {
 
   const token = authHeader.slice(7);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = getSupabaseUrl();
+  const supabaseAnonKey = getSupabaseAnonKey();
 
   const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: {

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { handleApiError, apiResponse, ValidationError, ConflictError } from "@/lib/services/errors";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,24 +31,31 @@ export async function POST(request: NextRequest) {
       throw new ConflictError("A user with this email already exists.");
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseAnonKey = getSupabaseAnonKey();
 
-    const signupRes = await fetch(`${supabaseUrl}/auth/v1/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: supabaseAnonKey,
-      },
-      body: JSON.stringify({
-        email,
-        password,
-        data: {
-          display_name,
-          role,
+    let signupRes: Response;
+    try {
+      signupRes = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseAnonKey,
         },
-      }),
-    });
+        body: JSON.stringify({
+          email,
+          password,
+          data: {
+            display_name,
+            role,
+          },
+        }),
+      });
+    } catch {
+      throw new ValidationError(
+        `Unable to reach Supabase at ${supabaseUrl}. Check SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL.`,
+      );
+    }
 
     if (!signupRes.ok) {
       const err = await signupRes.json();

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { evidence, issues, participants } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { NotFoundError, ForbiddenError, ValidationError } from "@/lib/services/errors";
+import { getSupabaseUrl } from "@/lib/supabase/config";
 
 const ALLOWED_EXTENSIONS = [
   ".pdf", ".docx", ".doc", ".jpg", ".jpeg", ".png", ".tiff", ".tif",
@@ -28,7 +29,7 @@ function validateFileName(filename: string): string {
 }
 
 async function getSupabaseServiceClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseUrl = getSupabaseUrl();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
 
   if (!serviceKey) {

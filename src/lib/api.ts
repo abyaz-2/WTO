@@ -120,15 +120,23 @@ export function fetchUsers(): Promise<import("@/lib/types").User[]> {
 
 export interface CreateUserResponse {
   user: import("@/lib/types").User;
-  tempPassword: string;
+}
+
+export interface DeleteUserResponse {
+  id: string;
+  is_active: boolean;
 }
 
 export function createUser(data: {
   email: string;
   country: string;
-  role: string;
+  password: string;
 }): Promise<CreateUserResponse> {
   return api.post("/users", data);
+}
+
+export function deleteUser(userId: string): Promise<DeleteUserResponse> {
+  return api.delete(`/users/${userId}`);
 }
 
 

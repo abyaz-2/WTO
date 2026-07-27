@@ -34,8 +34,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 Set these variables for the Supabase and admin access flow:
 
 - `DATABASE_URL` or `SUPABASE_DB_URL`
+- `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SERVICE_KEY`
 - `ADMIN_EMAIL` or `ADMIN_EMAILS` for the user-management allowlist
 

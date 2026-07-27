@@ -5,11 +5,6 @@ import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import NotificationBell from "@/components/NotificationBell";
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "abyazashiq@gmail.com")
-  .split(",")
-  .map((email) => email.trim().toLowerCase())
-  .filter(Boolean);
-
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/issues", label: "Issues" },
@@ -22,7 +17,7 @@ interface DashboardNavProps {
 
 export default function DashboardNav({ user }: DashboardNavProps) {
   const pathname = usePathname();
-  const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase() ?? "");
+  const isAdmin = user.user_metadata?.role === "executive_board";
 
   const items = isAdmin
     ? NAV_ITEMS.concat({ href: "/dashboard/users", label: "Users" })

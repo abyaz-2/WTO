@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { fetchUsers, createUser } from "@/lib/api";
+import { fetchUsers, createUser, deleteUser } from "@/lib/api";
 import Skeleton from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
@@ -30,13 +30,48 @@ function RoleBadge({ role }: { role: string }) {
 interface AddUserFormData {
   email: string;
   country: string;
-  role: "executive_board" | "delegate";
+  password: string;
 }
 
 type CreatedUserResult = {
   user: import("@/lib/types").User;
-  tempPassword: string;
 };
+
+function RemoveUserButton({ userId, disabled }: { userId: string; disabled?: boolean }) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: deleteUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (err: Error) => {
+      setError(err.message);
+    },
+  });
+
+  const handleRemove = () => {
+    setError(null);
+    const confirmed = window.confirm("Remove this user? This will revoke their access.");
+    if (!confirmed) return;
+    mutation.mutate(userId);
+  };
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={handleRemove}
+        disabled={disabled || mutation.isPending}
+        className="px-3 py-1.5 text-xs font-medium text-red-300 bg-red-500/10 border border-red-500/20 rounded-[8px] hover:bg-red-500/15 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {mutation.isPending ? "Removing..." : "Remove"}
+      </button>
+      {error && <span className="text-[11px] text-red-400 max-w-[10rem] text-right">{error}</span>}
+    </div>
+  );
+}
 
 function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -49,7 +84,6 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
     reset,
     formState: { errors },
   } = useForm<AddUserFormData>({
-    defaultValues: { role: "delegate" },
   });
 
   const mutation = useMutation({
@@ -72,7 +106,7 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
   const handleClose = () => {
     setCreatedUser(null);
     setSubmitError(null);
-    reset({ role: "delegate" });
+    reset();
     onClose();
   };
 
@@ -83,7 +117,7 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
           <div className="rounded-[10px] border border-green-500/20 bg-green-500/10 p-4">
             <p className="text-sm font-medium text-green-300">User created</p>
             <p className="text-xs text-[#B6C3D1] mt-1">
-              The temporary password is shown once. Copy it now and share it securely.
+              The account was created in Supabase Auth and is ready to use.
             </p>
           </div>
 
@@ -97,14 +131,8 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
               <p className="text-white">{createdUser.user.country ?? "-"}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider text-[#7D8DA0] mb-1">Temporary Password</p>
-              <div className="flex items-center gap-2">
-                <input
-                  readOnly
-                  value={createdUser.tempPassword}
-                  className="flex-1 px-3 py-2 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white rounded-[8px]"
-                />
-              </div>
+              <p className="text-xs uppercase tracking-wider text-[#7D8DA0] mb-1">Status</p>
+              <p className="text-white">Password set by admin</p>
             </div>
           </div>
 
@@ -160,19 +188,21 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
         </div>
 
         <div>
-          <label htmlFor="role" className="block text-sm font-medium text-white mb-1.5">
-            Role
+          <label htmlFor="password" className="block text-sm font-medium text-white mb-1.5">
+            Password
           </label>
-          <select
-            id="role"
-            {...register("role", { required: "Role is required" })}
-            className="w-full px-4 py-2.5 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white rounded-[8px] focus:outline-none focus:border-[rgba(30,111,232,0.5)] focus:ring-1 focus:ring-[rgba(30,111,232,0.3)] transition-all"
-          >
-            <option value="delegate">Delegate</option>
-            <option value="executive_board">Executive Board</option>
-          </select>
-          {errors.role && (
-            <p className="text-xs text-red-400 mt-1">{errors.role.message}</p>
+          <input
+            id="password"
+            type="password"
+            placeholder="Enter a password for this user"
+            {...register("password", {
+              required: "Password is required",
+              minLength: { value: 8, message: "Password must be at least 8 characters" },
+            })}
+            className="w-full px-4 py-2.5 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white placeholder-[#7D8DA0] rounded-[8px] focus:outline-none focus:border-[rgba(30,111,232,0.5)] focus:ring-1 focus:ring-[rgba(30,111,232,0.3)] transition-all"
+          />
+          {errors.password && (
+            <p className="text-xs text-red-400 mt-1">{errors.password.message}</p>
           )}
         </div>
 
@@ -270,6 +300,7 @@ export default function UserDirectory() {
                 <th className="text-left px-5 py-3 text-xs font-semibold tracking-wider uppercase text-[#7D8DA0]">Country</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold tracking-wider uppercase text-[#7D8DA0]">Role</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold tracking-wider uppercase text-[#7D8DA0]">Status</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold tracking-wider uppercase text-[#7D8DA0]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[rgba(255,255,255,0.06)]">
@@ -309,6 +340,13 @@ export default function UserDirectory() {
                     >
                       {user.is_active ? "Active" : "Inactive"}
                     </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    {user.is_active ? (
+                      <RemoveUserButton userId={user.id} disabled={user.role === "executive_board"} />
+                    ) : (
+                      <span className="text-xs text-[#7D8DA0]">Removed</span>
+                    )}
                   </td>
                 </motion.tr>
               ))}
