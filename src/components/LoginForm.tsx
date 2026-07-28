@@ -113,10 +113,19 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           <p className="text-sm text-red-400 leading-relaxed">{error}</p>
         )}
 
+        <div className="flex items-center justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-xs text-[#6CA9FF] hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
+
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-10 text-xs font-semibold text-white bg-[#1E6FE8] rounded-lg hover:bg-[#1A5FC4] mt-10 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 transition-all duration-200"
+          className="w-full h-10 text-xs font-semibold text-white bg-[#1E6FE8] rounded-lg hover:bg-[#1A5FC4] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 transition-all duration-200"
         >
           {loading ? "Signing in..." : "Sign In"}
         </button>
