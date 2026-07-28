@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Sora } from "next/font/google";
 import "./globals.css";
+import Providers from "./providers";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -37,7 +38,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={sora.variable}>
       <body className="font-[family-name:var(--font-sora)]">
-        <ErrorBoundary>{children}</ErrorBoundary>
+        <Providers>
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </Providers>
       </body>
     </html>
   );

@@ -11,10 +11,16 @@ if (!databaseUrl) {
   throw new Error("Missing database connection string. Set DATABASE_URL for Supabase Postgres.");
 }
 
-const shouldUseSsl = /supabase\.(co|in|net|com)$|sslmode=require/i.test(databaseUrl);
+const normalizedDatabaseUrl = (() => {
+  const url = new URL(databaseUrl);
+  url.searchParams.delete("sslmode");
+  return url.toString();
+})();
+
+const shouldUseSsl = /supabase\.(co|in|net|com)$/.test(normalizedDatabaseUrl);
 
 const pool = new Pool({
-  connectionString: databaseUrl,
+  connectionString: normalizedDatabaseUrl,
   ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
   max: 10,
   connectionTimeoutMillis: 15000,
