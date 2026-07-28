@@ -1,6 +1,4 @@
-import { db } from "@/lib/db";
-import { issues, participants, revisions, users } from "@/lib/db/schema";
-import { eq, and, ilike, count, desc } from "drizzle-orm";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { NotFoundError, ForbiddenError, ValidationError } from "@/lib/services/errors";
 import crypto from "crypto";
 
@@ -14,9 +12,9 @@ export const VALID_TRANSITIONS: Record<string, string[]> = {
   registration_closed: ["submission_phase"],
   submission_phase: ["evidence_phase"],
   evidence_phase: ["eb_review"],
-  eb_review: ["fact_checking", "draft"],
+  eb_review: ["fact_checking", "final_published", "draft"],
   fact_checking: ["final_revision", "eb_review"],
-  final_revision: ["final_published"],
+  final_revision: ["final_published", "eb_review"],
   final_published: ["archived"],
   rejected: ["draft"],
 };
@@ -38,9 +36,25 @@ const TRANSITION_PERMISSIONS: Record<string, string> = {
   archived: "eb",
 };
 
-export async function createIssue(data: { title: string; description?: string; respondentId?: string }, userId: string) {
-  const [countResult] = await db.select({ value: count() }).from(issues);
-  const nextNumber = Number(countResult.value) + 1;
+function toIssueResponse(issue: any) {
+  return {
+    id: issue.id,
+    issue_number: issue.issue_number,
+    title: issue.title,
+    description: issue.description ?? null,
+    complainant_id: issue.complainant_id,
+    current_status: issue.current_status,
+    timeline: issue.timeline,
+    published_report_url: issue.published_report_url ?? null,
+    metadata: issue.metadata,
+    created_at: issue.created_at,
+    updated_at: issue.updated_at,
+  };
+}
+
+export async function createIssue(data: { title: string; description?: string; respondentId?: string; coComplainantIds?: string[] }, userId: string) {
+  const { count } = await supabaseAdmin.from("issues").select("*", { count: "exact", head: true });
+  const nextNumber = (count ?? 0) + 1;
   const issueNumber = `WTO-${String(nextNumber).padStart(4, "0")}`;
 
   const timelineEntry = {
@@ -52,43 +66,62 @@ export async function createIssue(data: { title: string; description?: string; r
     created_at: new Date().toISOString(),
   };
 
-  const [issue] = await db
-    .insert(issues)
-    .values({
-      issueNumber,
+  const { data: issue, error } = await supabaseAdmin
+    .from("issues")
+    .insert({
+      issue_number: issueNumber,
       title: data.title,
       description: data.description,
-      complainantId: userId,
-      currentStatus: "draft",
+      complainant_id: userId,
+      current_status: "draft",
       timeline: [timelineEntry],
     })
-    .returning();
+    .select()
+    .single();
 
-  await db.insert(participants).values({
-    issueId: issue.id,
-    userId,
+  if (error) throw new Error(error.message);
+  if (!issue) throw new Error("Failed to create issue");
+
+  await supabaseAdmin.from("participants").insert({
+    issue_id: issue.id,
+    user_id: userId,
     role: "complainant",
     status: "active",
-    joinedAt: new Date().toISOString(),
+    joined_at: new Date().toISOString(),
   });
 
   if (data.respondentId) {
-    await db.insert(participants).values({
-      issueId: issue.id,
-      userId: data.respondentId,
+    await supabaseAdmin.from("participants").insert({
+      issue_id: issue.id,
+      user_id: data.respondentId,
       role: "respondent",
       status: "active",
-      joinedAt: new Date().toISOString(),
+      joined_at: new Date().toISOString(),
     });
   }
 
-  return issue;
+  if (data.coComplainantIds?.length) {
+    const coComplainants = data.coComplainantIds
+      .filter((id) => id !== userId)
+      .map((id) => ({
+        issue_id: issue.id,
+        user_id: id,
+        role: "complainant",
+        status: "active",
+        joined_at: new Date().toISOString(),
+      }));
+    if (coComplainants.length > 0) {
+      await supabaseAdmin.from("participants").insert(coComplainants);
+    }
+  }
+
+  return toIssueResponse(issue);
 }
 
 export async function getIssue(issueId: string) {
-  const [issue] = await db.select().from(issues).where(eq(issues.id, issueId)).limit(1);
-  if (!issue) throw new NotFoundError("Issue");
-  return issue;
+  const { data: issue, error } = await supabaseAdmin.from("issues").select("*").eq("id", issueId).single();
+  if (error || !issue) throw new NotFoundError("Issue");
+  return toIssueResponse(issue);
 }
 
 export async function listIssues(
@@ -96,45 +129,36 @@ export async function listIssues(
   perPage: number = 20,
   options?: { status?: string; search?: string; userId?: string },
 ) {
-  const conditions: (ReturnType<typeof eq> | ReturnType<typeof ilike>)[] = [];
+  let query = supabaseAdmin.from("issues").select("*", { count: "exact" });
 
   if (options?.status) {
-    conditions.push(eq(issues.currentStatus, options.status));
+    query = query.eq("current_status", options.status);
   }
 
   if (options?.userId) {
-    conditions.push(eq(issues.complainantId, options.userId));
+    query = query.eq("complainant_id", options.userId);
   }
 
   if (options?.search) {
-    conditions.push(ilike(issues.title, `%${options.search}%`));
+    query = query.ilike("title", `%${options.search}%`);
   }
-
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const offset = (page - 1) * perPage;
 
-  const [totalResult] = await db
-    .select({ value: count() })
-    .from(issues)
-    .where(whereClause);
+  const { data, error, count } = await query
+    .order("created_at", { ascending: false })
+    .range(offset, offset + perPage - 1);
 
-  const total = Number(totalResult.value);
+  if (error) throw new Error(error.message);
 
-  const data = await db
-    .select()
-    .from(issues)
-    .where(whereClause)
-    .orderBy(desc(issues.createdAt))
-    .limit(perPage)
-    .offset(offset);
+  const total = count ?? 0;
 
   return {
-    data,
+    data: (data ?? []).map(toIssueResponse),
     total,
     page,
-    pageSize: perPage,
-    totalPages: Math.ceil(total / perPage),
+    page_size: perPage,
+    total_pages: Math.ceil(total / perPage),
   };
 }
 
@@ -143,13 +167,14 @@ export async function updateIssue(
   data: { title?: string; description?: string },
   userId: string,
 ) {
-  const issue = await getIssue(issueId);
+  const { data: issue } = await supabaseAdmin.from("issues").select("*").eq("id", issueId).single();
+  if (!issue) throw new NotFoundError("Issue");
 
-  if (issue.complainantId !== userId) {
+  if (issue.complainant_id !== userId) {
     throw new ForbiddenError("Only the complainant can update this issue");
   }
 
-  if (issue.currentStatus !== "draft") {
+  if (issue.current_status !== "draft") {
     throw new ValidationError("Issue can only be updated in draft status");
   }
 
@@ -164,40 +189,42 @@ export async function updateIssue(
   }
 
   if (Object.keys(changes).length > 0) {
-    const [latestRevision] = await db
-      .select({ version: revisions.version })
-      .from(revisions)
-      .where(
-        and(eq(revisions.revisableType, "issue"), eq(revisions.revisableId, issueId)),
-      )
-      .orderBy(desc(revisions.version))
-      .limit(1);
+    const { data: latestRevision } = await supabaseAdmin
+      .from("revisions")
+      .select("version")
+      .eq("revisable_type", "issue")
+      .eq("revisable_id", issueId)
+      .order("version", { ascending: false })
+      .limit(1)
+      .single();
 
     const nextVersion = (latestRevision?.version ?? 0) + 1;
 
-    await db.insert(revisions).values({
-      revisableType: "issue",
-      revisableId: issueId,
+    await supabaseAdmin.from("revisions").insert({
+      revisable_type: "issue",
+      revisable_id: issueId,
       version: nextVersion,
       changes,
-      createdBy: userId,
+      created_by: userId,
     });
   }
 
   const updateData: Record<string, unknown> = {
-    updatedAt: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
 
-  const [updated] = await db
-    .update(issues)
-    .set(updateData)
-    .where(eq(issues.id, issueId))
-    .returning();
+  const { data: updated, error } = await supabaseAdmin
+    .from("issues")
+    .update(updateData)
+    .eq("id", issueId)
+    .select()
+    .single();
 
-  return updated;
+  if (error) throw new Error(error.message);
+  return toIssueResponse(updated);
 }
 
 export async function transitionStatus(
@@ -206,9 +233,10 @@ export async function transitionStatus(
   userId: string,
   userRole: string,
 ) {
-  const issue = await getIssue(issueId);
-  const currentStatus = issue.currentStatus;
+  const { data: issue } = await supabaseAdmin.from("issues").select("*").eq("id", issueId).single();
+  if (!issue) throw new NotFoundError("Issue");
 
+  const currentStatus = issue.current_status;
   const allowedTransitions = VALID_TRANSITIONS[currentStatus];
   if (!allowedTransitions || !allowedTransitions.includes(targetStatus)) {
     throw new ValidationError(
@@ -222,7 +250,7 @@ export async function transitionStatus(
   }
 
   if (requiredRole === "complainant") {
-    if (issue.complainantId !== userId) {
+    if (issue.complainant_id !== userId) {
       throw new ForbiddenError("Only the complainant can perform this transition");
     }
   } else if (requiredRole === "eb") {
@@ -242,23 +270,26 @@ export async function transitionStatus(
     created_at: new Date().toISOString(),
   };
 
-  const [updated] = await db
-    .update(issues)
-    .set({
-      currentStatus: targetStatus,
+  const { data: updated, error } = await supabaseAdmin
+    .from("issues")
+    .update({
+      current_status: targetStatus,
       timeline: [...currentTimeline, timelineEntry],
-      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
-    .where(eq(issues.id, issueId))
-    .returning();
+    .eq("id", issueId)
+    .select()
+    .single();
 
-  return updated;
+  if (error) throw new Error(error.message);
+  return toIssueResponse(updated);
 }
 
 export async function archiveIssue(issueId: string, userId: string) {
-  const issue = await getIssue(issueId);
+  const { data: issue } = await supabaseAdmin.from("issues").select("*").eq("id", issueId).single();
+  if (!issue) throw new NotFoundError("Issue");
 
-  if (issue.currentStatus === "archived") {
+  if (issue.current_status === "archived") {
     throw new ValidationError("Issue is already archived");
   }
 
@@ -271,49 +302,42 @@ export async function archiveIssue(issueId: string, userId: string) {
     created_at: new Date().toISOString(),
   };
 
-  const [updated] = await db
-    .update(issues)
-    .set({
-      currentStatus: "archived",
+  const { data: updated, error } = await supabaseAdmin
+    .from("issues")
+    .update({
+      current_status: "archived",
       timeline: [...currentTimeline, timelineEntry],
-      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
-    .where(eq(issues.id, issueId))
-    .returning();
+    .eq("id", issueId)
+    .select()
+    .single();
 
-  return updated;
+  if (error) throw new Error(error.message);
+  return toIssueResponse(updated);
 }
 
 export async function listArchiveIssues(page: number = 1, perPage: number = 12, search?: string) {
-  const conditions = [eq(issues.currentStatus, "archived")];
+  let query = supabaseAdmin.from("issues").select("*", { count: "exact" }).eq("current_status", "archived");
 
   if (search) {
-    conditions.push(ilike(issues.title, `%${search}%`));
+    query = query.ilike("title", `%${search}%`);
   }
 
-  const whereClause = and(...conditions);
+  const { data: rows, error, count } = await query
+    .order("updated_at", { ascending: false })
+    .range((page - 1) * perPage, page * perPage - 1);
 
-  const [totalResult] = await db
-    .select({ value: count() })
-    .from(issues)
-    .where(whereClause);
-  const total = Number(totalResult?.value ?? 0);
+  if (error) throw new Error(error.message);
 
-  const rows = await db
-    .select()
-    .from(issues)
-    .where(whereClause)
-    .orderBy(desc(issues.updatedAt))
-    .limit(perPage)
-    .offset((page - 1) * perPage);
+  const total = count ?? 0;
 
   const disputes = await Promise.all(
-    rows.map(async (issue) => {
-      const participantRows = await db
-        .select({ displayName: users.displayName })
-        .from(participants)
-        .innerJoin(users, eq(participants.userId, users.id))
-        .where(eq(participants.issueId, issue.id));
+    (rows ?? []).map(async (issue) => {
+      const { data: participantRows } = await supabaseAdmin
+        .from("participants")
+        .select("user_id, users!inner(display_name)")
+        .eq("issue_id", issue.id);
 
       const timeline = (issue.timeline ?? []) as Array<Record<string, unknown>>;
 
@@ -326,11 +350,11 @@ export async function listArchiveIssues(page: number = 1, perPage: number = 12, 
 
       return {
         id: issue.id,
-        number: issue.issueNumber,
+        number: issue.issue_number,
         title: issue.title,
-        parties: participantRows.map((p) => p.displayName),
-        published_at: (publishedEntry?.created_at as string) ?? issue.createdAt,
-        archived_at: (archivedEntry?.created_at as string) ?? issue.updatedAt,
+        parties: (participantRows ?? []).map((p: any) => p.users?.display_name ?? "Unknown"),
+        published_at: (publishedEntry?.created_at as string) ?? issue.created_at,
+        archived_at: (archivedEntry?.created_at as string) ?? issue.updated_at,
       };
     }),
   );

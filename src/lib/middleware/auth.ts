@@ -4,6 +4,7 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { UnauthorizedError, ForbiddenError } from "@/lib/services/errors";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
+import { isAdminEmail } from "@/lib/auth";
 
 export interface AuthUser {
   id: string;

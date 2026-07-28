@@ -11,9 +11,9 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? process.env.NEXT_P
   .filter(Boolean);
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/issues", label: "Issues" },
-  { href: "/dashboard/notifications", label: "Notifications" },
+  { href: "/", label: "Dashboard" },
+  { href: "/issues", label: "Issues" },
+  { href: "/notifications", label: "Notifications" },
 ];
 
 interface DashboardNavProps {

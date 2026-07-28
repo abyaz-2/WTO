@@ -13,16 +13,6 @@
   --color-border-strong: rgba(255, 255, 255, 0.16);
   --font-display: var(--font-sora);
   --font-body: var(--font-sora);
-  --spacing-xs: 8px;
-  --spacing-sm: 16px;
-  --spacing-md: 24px;
-  --spacing-lg: 40px;
-  --spacing-xl: 64px;
-  --spacing-xxl: 96px;
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
   --content-width: 1200px;
   --max-width: 1440px;
 }

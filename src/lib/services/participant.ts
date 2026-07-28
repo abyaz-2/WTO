@@ -8,12 +8,19 @@ export async function registerParticipant(
   userId: string,
   role: string,
   actorRole: string,
+  actorUserId?: string,
 ) {
   const [issue] = await db.select().from(issues).where(eq(issues.id, issueId)).limit(1);
   if (!issue) throw new NotFoundError("Issue");
 
-  if (actorRole !== "executive_board") {
-    throw new ForbiddenError("Only executive board members can register participants");
+  const isSelfRegistration = actorUserId === userId;
+
+  if (actorRole !== "executive_board" && !isSelfRegistration) {
+    throw new ForbiddenError("Only executive board members can register other participants");
+  }
+
+  if (actorRole !== "executive_board" && role === "complainant") {
+    throw new ForbiddenError("Only executive board members can assign complainant role");
   }
 
   if (!["draft", "registration_open"].includes(issue.currentStatus)) {
@@ -124,7 +131,7 @@ export async function listParticipants(issueId: string) {
   const [issue] = await db.select().from(issues).where(eq(issues.id, issueId)).limit(1);
   if (!issue) throw new NotFoundError("Issue");
 
-  return db
+  const rows = await db
     .select({
       id: participants.id,
       issueId: participants.issueId,
@@ -135,8 +142,25 @@ export async function listParticipants(issueId: string) {
       metadata: participants.metadata,
       displayName: users.displayName,
       email: users.email,
+      avatarUrl: users.avatarUrl,
     })
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
     .where(eq(participants.issueId, issueId));
+
+  return rows.map((row) => ({
+    id: row.id,
+    issue_id: row.issueId,
+    user_id: row.userId,
+    role: row.role,
+    status: row.status,
+    joined_at: row.joinedAt,
+    metadata: row.metadata,
+    user: {
+      id: row.userId,
+      display_name: row.displayName,
+      email: row.email,
+      avatar_url: row.avatarUrl,
+    },
+  }));
 }

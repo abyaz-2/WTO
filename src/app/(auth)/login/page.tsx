@@ -13,7 +13,7 @@ export default function LoginPage() {
   const handleLoginSuccess = useCallback(() => {
     setGlobeVisible(false);
     setTimeout(() => {
-      router.push("/dashboard");
+      router.push("/");
     }, 850);
   }, [router]);
 
@@ -23,7 +23,7 @@ export default function LoginPage() {
 
       <div className="absolute inset-0 z-[1] bg-gradient-to-b from-[#05162D]/20 via-[#05162D]/50 to-[#05162D] pointer-events-none" />
 
-      <div className="relative z-10 w-[min(30rem,80vw)] mx-auto px-4 sm:px-6">
+      <div className="relative z-10 w-full max-w-[28rem] mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -41,7 +41,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div style={{ padding: '80px 64px' }} className="bg-[#112F5A] rounded-xl border border-[rgba(255,255,255,0.2)] shadow-xl">
+          <div className="bg-[#112F5A] rounded-xl border border-[rgba(255,255,255,0.2)] shadow-xl p-8 sm:p-10">
             <LoginForm onSuccess={handleLoginSuccess} />
           </div>
         </motion.div>

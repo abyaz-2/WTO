@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/proxy";
 
-const DASHBOARD_ROUTES = ["/dashboard"];
-const AUTH_ROUTES = ["/", "/login", "/signup"];
+const DASHBOARD_ROUTES: string[] = [];
+const AUTH_ROUTES = ["/login", "/signup", "/forgot-password", "/update-password"];
 
 export default async function proxy(request: NextRequest) {
   const { supabase, supabaseResponse } = await createClient(request);
@@ -21,7 +21,7 @@ export default async function proxy(request: NextRequest) {
 
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
@@ -30,6 +30,4 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|logo.png|.*\\.svg|.*\\.png).*)",
-  ],
-};
+    "/((?!_next/static|_next/image|favicon.ico|l

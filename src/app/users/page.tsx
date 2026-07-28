@@ -7,7 +7,7 @@ export default async function UsersPage() {
   return (
     <div className="p-8 sm:p-10 lg:p-12">
       <div className="max-w-[var(--content-width,1200px)] mx-auto">
-        <div className="mb-8 flex items-end justify-between gap-6">
+        <div className="mb-10 flex items-end justify-between gap-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#6CA9FF] mb-3">
               Admin Console

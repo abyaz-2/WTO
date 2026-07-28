@@ -200,7 +200,7 @@ export async function getUser(userId: string) {
   return user;
 }
 
-export async function updateUser(userId: string, data: { displayName?: string; avatarUrl?: string }) {
+export async function updateUser(userId: string, data: { displayName?: string; avatarUrl?: string; role?: UserRole; isActive?: boolean; country?: string | null }) {
   const [user] = await db
     .update(users)
     .set({ ...data, updatedAt: new Date().toISOString() })
@@ -208,6 +208,22 @@ export async function updateUser(userId: string, data: { displayName?: string; a
     .returning();
   if (!user) throw new NotFoundError("User");
   return user;
+}
+
+export async function resetUserPassword(userId: string, newPassword: string) {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) throw new NotFoundError("User");
+
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase.auth.admin.updateUserById(user.supabaseId, {
+    password: newPassword,
+  });
+
+  if (error) {
+    throw new ValidationError(error.message || "Failed to reset password");
+  }
+
+  return { success: true };
 }
 
 export async function listUsers() {

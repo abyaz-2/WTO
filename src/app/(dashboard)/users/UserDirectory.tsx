@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { fetchUsers, createUser, deleteUser } from "@/lib/api";
+import { fetchUsers, createUser, updateUser, resetUserPassword, deleteUser } from "@/lib/api";
 import Skeleton from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
 import { motion } from "framer-motion";
 import type { User } from "@/lib/types";
+
+type UserRole = "executive_board" | "delegate";
 
 function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, string> = {
@@ -34,7 +36,7 @@ interface AddUserFormData {
 }
 
 type CreatedUserResult = {
-  user: import("@/lib/types").User;
+  user: User;
 };
 
 function RemoveUserButton({ userId, disabled }: { userId: string; disabled?: boolean }) {
@@ -70,6 +72,233 @@ function RemoveUserButton({ userId, disabled }: { userId: string; disabled?: boo
       </button>
       {error && <span className="text-[11px] text-red-400 max-w-[10rem] text-right">{error}</span>}
     </div>
+  );
+}
+
+function ReactivateButton({ userId }: { userId: string }) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (id: string) => updateUser(id, { isActive: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (err: Error) => {
+      setError(err.message);
+    },
+  });
+
+  const handleReactivate = () => {
+    setError(null);
+    mutation.mutate(userId);
+  };
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={handleReactivate}
+        disabled={mutation.isPending}
+        className="px-3 py-1.5 text-xs font-medium text-green-300 bg-green-500/10 border border-green-500/20 rounded-[8px] hover:bg-green-500/15 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {mutation.isPending ? "Reactivating..." : "Reactivate"}
+      </button>
+      {error && <span className="text-[11px] text-red-400 max-w-[10rem] text-right">{error}</span>}
+    </div>
+  );
+}
+
+function ResetPasswordSection({ userId }: { userId: string }) {
+  const [show, setShow] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (pw: string) => resetUserPassword(userId, pw),
+    onSuccess: () => {
+      setSuccess(true);
+      setPassword("");
+      setTimeout(() => { setShow(false); setSuccess(false); }, 1500);
+    },
+    onError: (err: Error) => {
+      setError(err.message);
+    },
+  });
+
+  if (!show) {
+    return (
+      <button
+        type="button"
+        onClick={() => { setShow(true); setError(null); }}
+        className="text-xs font-medium text-[#6CA9FF] hover:text-white transition-colors"
+      >
+        Reset password
+      </button>
+    );
+  }
+
+  const handleSubmit = () => {
+    setError(null);
+    setSuccess(false);
+    if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
+    mutation.mutate(password);
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-medium text-[#B6C3D1] uppercase tracking-wider">Reset Password</p>
+      {success ? (
+        <p className="text-xs text-green-400">Password updated successfully.</p>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="New password (min. 8 chars)"
+            className="flex-1 px-3 py-2 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white placeholder-[#7D8DA0] rounded-[8px] focus:outline-none focus:border-[rgba(30,111,232,0.5)] focus:ring-1 focus:ring-[rgba(30,111,232,0.3)] transition-all"
+          />
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={mutation.isPending}
+            className="px-4 py-2 text-xs font-medium text-white bg-[#1E6FE8] hover:bg-[#1A5FC8] disabled:opacity-50 rounded-[8px] transition-colors"
+          >
+            {mutation.isPending ? "..." : "Set"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShow(false)}
+            className="px-2 py-2 text-xs text-[#B6C3D1] hover:text-white transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
+  );
+}
+
+function EditUserModal({ open, onClose, user }: { open: boolean; onClose: () => void; user: User }) {
+  const queryClient = useQueryClient();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isDirty },
+  } = useForm<{
+    displayName: string;
+    country: string;
+    role: UserRole;
+  }>({
+    defaultValues: {
+      displayName: user.display_name,
+      country: user.country ?? "",
+      role: user.role as UserRole,
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: { displayName: string; country: string; role: UserRole }) =>
+      updateUser(user.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      onClose();
+    },
+    onError: (err: Error) => {
+      setSubmitError(err.message);
+    },
+  });
+
+  const onSubmit = (data: { displayName: string; country: string; role: UserRole }) => {
+    setSubmitError(null);
+    mutation.mutate(data);
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={`Edit User — ${user.email}`}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div>
+          <label htmlFor="edit-displayName" className="block text-sm font-medium text-white mb-1.5">
+            Display Name
+          </label>
+          <input
+            id="edit-displayName"
+            type="text"
+            {...register("displayName", {
+              required: "Display name is required",
+              minLength: { value: 1, message: "Display name is required" },
+            })}
+            className="w-full px-4 py-2.5 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white placeholder-[#7D8DA0] rounded-[8px] focus:outline-none focus:border-[rgba(30,111,232,0.5)] focus:ring-1 focus:ring-[rgba(30,111,232,0.3)] transition-all"
+          />
+          {errors.displayName && (
+            <p className="text-xs text-red-400 mt-1">{errors.displayName.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="edit-country" className="block text-sm font-medium text-white mb-1.5">
+            Country
+          </label>
+          <input
+            id="edit-country"
+            type="text"
+            placeholder="Kenya"
+            {...register("country")}
+            className="w-full px-4 py-2.5 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white placeholder-[#7D8DA0] rounded-[8px] focus:outline-none focus:border-[rgba(30,111,232,0.5)] focus:ring-1 focus:ring-[rgba(30,111,232,0.3)] transition-all"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="edit-role" className="block text-sm font-medium text-white mb-1.5">
+            Role
+          </label>
+          <select
+            id="edit-role"
+            {...register("role", { required: "Role is required" })}
+            className="w-full px-4 py-2.5 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white rounded-[8px] focus:outline-none focus:border-[rgba(30,111,232,0.5)] focus:ring-1 focus:ring-[rgba(30,111,232,0.3)] transition-all"
+          >
+            <option value="delegate">Delegate</option>
+            <option value="executive_board">Executive Board</option>
+          </select>
+          {errors.role && (
+            <p className="text-xs text-red-400 mt-1">{errors.role.message}</p>
+          )}
+        </div>
+
+        <div className="border-t border-[rgba(255,255,255,0.06)] pt-5">
+          <ResetPasswordSection userId={user.id} />
+        </div>
+
+        {submitError && (
+          <div className="p-3 rounded-[8px] bg-red-500/10 border border-red-500/20">
+            <p className="text-sm text-red-400">{submitError}</p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={mutation.isPending || !isDirty}
+            className="px-6 py-2.5 text-sm font-medium text-white bg-[#1E6FE8] hover:bg-[#1A5FC8] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px] transition-colors"
+          >
+            {mutation.isPending ? "Saving..." : "Save Changes"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-2.5 text-sm font-medium text-[#B6C3D1] hover:text-white transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -235,7 +464,8 @@ function AddUserModal({ open, onClose }: { open: boolean; onClose: () => void })
 }
 
 export default function UserDirectory() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   const { data: users, isLoading, isError } = useQuery({
     queryKey: ["users"],
@@ -269,12 +499,9 @@ export default function UserDirectory() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
-        {(!users || users.length === 0) ? null : (
-          <div />
-        )}
+      <div className="flex items-center justify-end mb-6">
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => setIsAddModalOpen(true)}
           className="px-4 py-2 text-sm font-medium text-white bg-[#1E6FE8] hover:bg-[#1A5FC8] rounded-[8px] transition-colors ml-auto"
         >
           Add User
@@ -342,11 +569,20 @@ export default function UserDirectory() {
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    {user.is_active ? (
-                      <RemoveUserButton userId={user.id} disabled={user.role === "executive_board"} />
-                    ) : (
-                      <span className="text-xs text-[#7D8DA0]">Removed</span>
-                    )}
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setEditingUser(user)}
+                        className="px-3 py-1.5 text-xs font-medium text-[#B6C3D1] bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.08)] rounded-[8px] hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+                      >
+                        Edit
+                      </button>
+                      {user.is_active ? (
+                        <RemoveUserButton userId={user.id} disabled={user.role === "executive_board"} />
+                      ) : (
+                        <ReactivateButton userId={user.id} />
+                      )}
+                    </div>
                   </td>
                 </motion.tr>
               ))}
@@ -356,9 +592,17 @@ export default function UserDirectory() {
       )}
 
       <AddUserModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
       />
+
+      {editingUser && (
+        <EditUserModal
+          open={!!editingUser}
+          onClose={() => setEditingUser(null)}
+          user={editingUser}
+        />
+      )}
     </>
   );
 }

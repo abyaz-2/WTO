@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import type { Participant, IssueStatus } from "@/lib/types";
 
 interface ParticipantListProps {
@@ -14,10 +15,47 @@ interface RoleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (role: string) => void;
+  issueId: string;
+  onRegistered: () => void;
+  onError: (msg: string) => void;
 }
 
-function RoleModal({ isOpen, onClose, onSelect }: RoleModalProps) {
+function RoleModal({ isOpen, onClose, onSelect, issueId, onRegistered, onError }: RoleModalProps) {
+  const [loading, setLoading] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleSelect = async (role: string) => {
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        onError("Not authenticated");
+        onClose();
+        return;
+      }
+      const res = await fetch(`/api/v1/issues/${issueId}/participants`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) {
+        const err = await res.text().catch(() => "Registration failed");
+        onError(err);
+      } else {
+        onRegistered();
+      }
+    } catch {
+      onError("Registration failed");
+    } finally {
+      setLoading(false);
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
@@ -31,20 +69,23 @@ function RoleModal({ isOpen, onClose, onSelect }: RoleModalProps) {
         <p className="text-sm text-[#B6C3D1] mb-5">Select your role</p>
         <div className="space-y-2">
           <button
-            onClick={() => onSelect("respondent")}
-            className="w-full px-4 py-3 text-sm font-medium text-left text-white bg-[#112F5A] hover:bg-[#1a3f6f] rounded-[8px] transition-colors"
+            onClick={() => handleSelect("respondent")}
+            disabled={loading}
+            className="w-full px-4 py-3 text-sm font-medium text-left text-white bg-[#112F5A] hover:bg-[#1a3f6f] disabled:opacity-50 rounded-[8px] transition-colors"
           >
-            Respondent
+            {loading ? "Registering..." : "Respondent"}
           </button>
           <button
-            onClick={() => onSelect("third_party")}
-            className="w-full px-4 py-3 text-sm font-medium text-left text-white bg-[#112F5A] hover:bg-[#1a3f6f] rounded-[8px] transition-colors"
+            onClick={() => handleSelect("third_party")}
+            disabled={loading}
+            className="w-full px-4 py-3 text-sm font-medium text-left text-white bg-[#112F5A] hover:bg-[#1a3f6f] disabled:opacity-50 rounded-[8px] transition-colors"
           >
-            Third Party
+            {loading ? "Registering..." : "Third Party"}
           </button>
         </div>
         <button
           onClick={onClose}
+          disabled={loading}
           className="w-full mt-3 px-4 py-2.5 text-sm text-[#B6C3D1] hover:text-white transition-colors"
         >
           Cancel
@@ -81,6 +122,9 @@ function ParticipantAvatar({ participant }: { participant: Participant }) {
 
 export default function ParticipantList({ participants, issueStatus, issueId }: ParticipantListProps) {
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+
+  const refetchKey = useState(0);
 
   const grouped = {
     complainant: (participants ?? []).filter((p) => p.role === "complainant"),
@@ -128,6 +172,10 @@ export default function ParticipantList({ participants, issueStatus, issueId }: 
           <p className="text-sm text-[#7D8DA0]">No participants registered yet.</p>
         )}
 
+        {registerError && (
+          <p className="text-xs text-red-400">{registerError}</p>
+        )}
+
         {issueStatus === "registration_open" && (
           <motion.button
             whileHover={{ scale: 1.01 }}
@@ -143,9 +191,13 @@ export default function ParticipantList({ participants, issueStatus, issueId }: 
       <RoleModal
         isOpen={showRoleModal}
         onClose={() => setShowRoleModal(false)}
-        onSelect={(role) => {
-          setShowRoleModal(false);
+        onSelect={() => {}}
+        issueId={issueId}
+        onRegistered={() => {
+          refetchKey[1]((k) => k + 1);
+          window.location.reload();
         }}
+        onError={(msg) => setRegisterError(msg)}
       />
     </>
   );

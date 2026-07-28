@@ -10,7 +10,7 @@ export async function getUser() {
 export async function requireAuth() {
   const user = await getUser();
   if (!user) {
-    redirect("/");
+    redirect("/login");
   }
   return user;
 }
@@ -18,7 +18,7 @@ export async function requireAuth() {
 export async function requireEb() {
   const user = await requireAuth();
   if (getRole(user) !== "executive_board") {
-    redirect("/dashboard");
+    redirect("/");
   }
   return user;
 }
@@ -39,7 +39,7 @@ export function isAdminEmail(email?: string | null): boolean {
 export async function requireAdmin() {
   const user = await requireAuth();
   if (!isAdminEmail(user.email)) {
-    redirect("/dashboard");
+    redirect("/");
   }
   return user;
 }
@@ -47,7 +47,7 @@ export async function requireAdmin() {
 export async function requireGuest() {
   const user = await getUser();
   if (user) {
-    redirect("/dashboard");
+    redirect("/");
   }
 }
 

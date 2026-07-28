@@ -6,7 +6,6 @@ import { handleApiError } from "@/lib/services/errors";
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
-    requireEb(user);
     const result = await listUsers();
     return Response.json(result);
   } catch (error) {

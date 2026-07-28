@@ -25,7 +25,8 @@ export async function POST(
     const user = await getCurrentUser(request);
     const { issueId } = await params;
     const body = await request.json();
-    const result = await registerParticipant(issueId, body.userId, body.role, user.role);
+    const targetUserId = body.userId ?? user.id;
+    const result = await registerParticipant(issueId, targetUserId, body.role, user.role, user.id);
     return Response.json(result, { status: 201 });
   } catch (error) {
     return handleApiError(error);

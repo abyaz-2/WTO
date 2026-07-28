@@ -140,7 +140,7 @@ export default function NotificationBell({ userId }: NotificationBellProps): Rea
             </div>
 
             <Link
-              href="/dashboard/notifications"
+              href="/notifications"
               onClick={() => setIsOpen(false)}
               className="block px-5 py-3 text-center text-xs font-medium text-[#6CA9FF] hover:text-white border-t border-[rgba(255,255,255,0.08)] transition-colors duration-200"
             >

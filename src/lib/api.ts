@@ -118,6 +118,10 @@ export function fetchUsers(): Promise<import("@/lib/types").User[]> {
   return api.get("/users");
 }
 
+export function fetchUser(id: string): Promise<import("@/lib/types").User> {
+  return api.get(`/users/${id}`);
+}
+
 export interface CreateUserResponse {
   user: import("@/lib/types").User;
 }
@@ -133,6 +137,19 @@ export function createUser(data: {
   password: string;
 }): Promise<CreateUserResponse> {
   return api.post("/users", data);
+}
+
+export function updateUser(id: string, data: {
+  displayName?: string;
+  country?: string | null;
+  role?: import("@/lib/types").UserRole;
+  isActive?: boolean;
+}): Promise<import("@/lib/types").User> {
+  return api.patch(`/users/${id}`, data);
+}
+
+export function resetUserPassword(id: string, password: string): Promise<{ success: boolean }> {
+  return api.post(`/users/${id}/reset-password`, { password });
 }
 
 export function deleteUser(userId: string): Promise<DeleteUserResponse> {

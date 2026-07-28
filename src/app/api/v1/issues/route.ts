@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
         title: body.title,
         description: body.description,
         respondentId: body.respondentId,
+        coComplainantIds: body.coComplainantIds,
       },
       user.id,
     );
