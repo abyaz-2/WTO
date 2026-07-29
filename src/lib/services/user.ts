@@ -228,21 +228,22 @@ export async function resetUserPassword(userId: string, newPassword: string) {
 
 export async function listUsers() {
   try {
-    return await db.select().from(users).orderBy(users.createdAt);
+    const result = await db.select().from(users).orderBy(users.createdAt);
+    if (result.length > 0) return result;
   } catch (error) {
     if (!isDatabaseConnectivityError(error)) {
       throw error;
     }
-
-    const supabase = getSupabaseAdminClient();
-    const { data, error: listError } = await supabase.auth.admin.listUsers();
-
-    if (listError) {
-      throw new ValidationError(listError.message || "Failed to load users from Supabase Auth");
-    }
-
-    return data.users.map((authUser) => mapAuthUserToRow(authUser));
   }
+
+  const supabase = getSupabaseAdminClient();
+  const { data, error: listError } = await supabase.auth.admin.listUsers();
+
+  if (listError) {
+    throw new ValidationError(listError.message || "Failed to load users from Supabase Auth");
+  }
+
+  return data.users.map((authUser) => mapAuthUserToRow(authUser));
 }
 
 export async function getUserByEmail(email: string) {

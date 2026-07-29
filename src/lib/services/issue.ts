@@ -1,4 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { db } from "@/lib/db";
+import { issues, participants } from "@/lib/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { NotFoundError, ForbiddenError, ValidationError } from "@/lib/services/errors";
 import crypto from "crypto";
 
@@ -39,21 +42,21 @@ const TRANSITION_PERMISSIONS: Record<string, string> = {
 function toIssueResponse(issue: any) {
   return {
     id: issue.id,
-    issue_number: issue.issue_number,
+    issue_number: issue.issue_number ?? issue.issueNumber,
     title: issue.title,
     description: issue.description ?? null,
-    complainant_id: issue.complainant_id,
-    current_status: issue.current_status,
+    complainant_id: issue.complainant_id ?? issue.complainantId,
+    current_status: issue.current_status ?? issue.currentStatus,
     timeline: issue.timeline,
-    published_report_url: issue.published_report_url ?? null,
+    published_report_url: issue.published_report_url ?? issue.publishedReportUrl ?? null,
     metadata: issue.metadata,
-    created_at: issue.created_at,
-    updated_at: issue.updated_at,
+    created_at: issue.created_at ?? issue.createdAt,
+    updated_at: issue.updated_at ?? issue.updatedAt,
   };
 }
 
 export async function createIssue(data: { title: string; description?: string; respondentId?: string; coComplainantIds?: string[] }, userId: string) {
-  const { count } = await supabaseAdmin.from("issues").select("*", { count: "exact", head: true });
+  const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(issues);
   const nextNumber = (count ?? 0) + 1;
   const issueNumber = `WTO-${String(nextNumber).padStart(4, "0")}`;
 
@@ -66,37 +69,35 @@ export async function createIssue(data: { title: string; description?: string; r
     created_at: new Date().toISOString(),
   };
 
-  const { data: issue, error } = await supabaseAdmin
-    .from("issues")
-    .insert({
-      issue_number: issueNumber,
+  const [issue] = await db
+    .insert(issues)
+    .values({
+      issueNumber,
       title: data.title,
-      description: data.description,
-      complainant_id: userId,
-      current_status: "draft",
+      description: data.description ?? null,
+      complainantId: userId,
+      currentStatus: "draft",
       timeline: [timelineEntry],
     })
-    .select()
-    .single();
+    .returning();
 
-  if (error) throw new Error(error.message);
   if (!issue) throw new Error("Failed to create issue");
 
-  await supabaseAdmin.from("participants").insert({
-    issue_id: issue.id,
-    user_id: userId,
+  await db.insert(participants).values({
+    issueId: issue.id,
+    userId,
     role: "complainant",
     status: "active",
-    joined_at: new Date().toISOString(),
+    joinedAt: new Date().toISOString(),
   });
 
   if (data.respondentId) {
-    await supabaseAdmin.from("participants").insert({
-      issue_id: issue.id,
-      user_id: data.respondentId,
+    await db.insert(participants).values({
+      issueId: issue.id,
+      userId: data.respondentId,
       role: "respondent",
       status: "active",
-      joined_at: new Date().toISOString(),
+      joinedAt: new Date().toISOString(),
     });
   }
 
@@ -104,14 +105,14 @@ export async function createIssue(data: { title: string; description?: string; r
     const coComplainants = data.coComplainantIds
       .filter((id) => id !== userId)
       .map((id) => ({
-        issue_id: issue.id,
-        user_id: id,
-        role: "complainant",
-        status: "active",
-        joined_at: new Date().toISOString(),
+        issueId: issue.id,
+        userId: id,
+        role: "complainant" as const,
+        status: "active" as const,
+        joinedAt: new Date().toISOString(),
       }));
     if (coComplainants.length > 0) {
-      await supabaseAdmin.from("participants").insert(coComplainants);
+      await db.insert(participants).values(coComplainants);
     }
   }
 
@@ -119,8 +120,8 @@ export async function createIssue(data: { title: string; description?: string; r
 }
 
 export async function getIssue(issueId: string) {
-  const { data: issue, error } = await supabaseAdmin.from("issues").select("*").eq("id", issueId).single();
-  if (error || !issue) throw new NotFoundError("Issue");
+  const [issue] = await db.select().from(issues).where(eq(issues.id, issueId)).limit(1);
+  if (!issue) throw new NotFoundError("Issue");
   return toIssueResponse(issue);
 }
 

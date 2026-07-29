@@ -4,10 +4,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
+import { createClient } from "@/lib/supabase/client";
 
 interface User {
   id: string;
-  display_name: string;
+  displayName: string;
   email: string;
   country: string | null;
   role: string;
@@ -49,11 +50,7 @@ function UserSearchSelect({
     if (excludeIds?.includes(u.id)) return false;
     if (!query) return true;
     const q = query.toLowerCase();
-    return (
-      u.display_name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      (u.country ?? "").toLowerCase().includes(q)
-    );
+    return (u.country ?? "").toLowerCase().includes(q);
   });
 
   const selected = users.find((u) => u.id === selectedId);
@@ -65,7 +62,7 @@ function UserSearchSelect({
         className="w-full px-4 py-2.5 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-white rounded-[8px] cursor-pointer flex items-center justify-between transition-all hover:border-[rgba(30,111,232,0.3)]"
       >
         <span className={selected ? "" : "text-[#7D8DA0]"}>
-          {selected ? `${selected.display_name}${selected.country ? ` (${selected.country})` : ""}` : placeholder}
+          {selected?.country ?? placeholder}
         </span>
         <svg className={`w-4 h-4 text-[#7D8DA0] transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -78,13 +75,13 @@ function UserSearchSelect({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search delegates..."
+              placeholder="Search countries..."
               className="w-full px-3 py-1.5 text-sm bg-[#0B2345] border border-[rgba(255,255,255,0.08)] text-white placeholder-[#7D8DA0] rounded-[6px] focus:outline-none focus:border-[rgba(30,111,232,0.4)]"
             />
           </div>
           <div className="overflow-y-auto max-h-48">
             {filtered.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-[#7D8DA0]">No users found</p>
+              <p className="px-4 py-3 text-sm text-[#7D8DA0]">No countries found</p>
             ) : (
               filtered.map((u) => (
                 <button
@@ -95,8 +92,7 @@ function UserSearchSelect({
                     selectedId === u.id ? "text-white bg-[rgba(30,111,232,0.15)]" : "text-[#B6C3D1]"
                   }`}
                 >
-                  <span className="text-white">{u.display_name}</span>
-                  {u.country && <span className="text-[#7D8DA0] ml-1.5">({u.country})</span>}
+                  <span className="text-white">{u.country}</span>
                 </button>
               ))
             )}
@@ -134,11 +130,7 @@ function CoComplainantSelect({
     if (excludeIds?.includes(u.id)) return false;
     if (!query) return true;
     const q = query.toLowerCase();
-    return (
-      u.display_name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      (u.country ?? "").toLowerCase().includes(q)
-    );
+    return (u.country ?? "").toLowerCase().includes(q);
   });
 
   const toggle = (id: string) => {
@@ -168,7 +160,7 @@ function CoComplainantSelect({
         <div className="flex flex-wrap gap-1.5 mt-2">
           {selectedUsers.map((u) => (
             <span key={u.id} className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-[rgba(30,111,232,0.15)] text-[#6CA9FF] rounded-[4px]">
-              {u.display_name}
+              {u.country}
               <button type="button" onClick={() => toggle(u.id)} className="hover:text-white transition-colors">&times;</button>
             </span>
           ))}
@@ -181,13 +173,13 @@ function CoComplainantSelect({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search delegates..."
+              placeholder="Search countries..."
               className="w-full px-3 py-1.5 text-sm bg-[#0B2345] border border-[rgba(255,255,255,0.08)] text-white placeholder-[#7D8DA0] rounded-[6px] focus:outline-none focus:border-[rgba(30,111,232,0.4)]"
             />
           </div>
           <div className="overflow-y-auto max-h-48">
             {filtered.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-[#7D8DA0]">No users found</p>
+              <p className="px-4 py-3 text-sm text-[#7D8DA0]">No countries found</p>
             ) : (
               filtered.map((u) => (
                 <button
@@ -207,8 +199,7 @@ function CoComplainantSelect({
                       </svg>
                     )}
                   </div>
-                  <span className="text-white">{u.display_name}</span>
-                  {u.country && <span className="text-[#7D8DA0] ml-0.5">({u.country})</span>}
+                  <span className="text-white">{u.country}</span>
                 </button>
               ))
             )}
@@ -238,15 +229,19 @@ export default function CreateIssueForm() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/v1/users");
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          setUsersLoading(false);
+          return;
+        }
+        setCurrentUserId(session.user?.id ?? null);
+        const res = await fetch("/api/v1/users", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
         if (res.ok) {
           const data = await res.json();
           setUsers(data);
-          const sessionRes = await fetch("/api/v1/auth/session");
-          if (sessionRes.ok) {
-            const session = await sessionRes.json();
-            setCurrentUserId(session.user?.id ?? null);
-          }
         }
       } catch {
         // silently fail
@@ -257,7 +252,7 @@ export default function CreateIssueForm() {
     load();
   }, []);
 
-  const delegateUsers = users.filter((u) => u.role === "delegate");
+  const delegateUsers = users.filter((u) => u.role === "delegate" && u.country);
   const respondentUsers = delegateUsers.filter((u) => u.id !== currentUserId && !selectedCoComplainants.includes(u.id));
   const coComplainantUsers = delegateUsers.filter((u) => u.id !== currentUserId && u.id !== selectedRespondent);
 
@@ -266,9 +261,15 @@ export default function CreateIssueForm() {
     setSubmitError(null);
 
     try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       const response = await fetch("/api/v1/issues", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           title: data.title,
           description: data.description,
@@ -340,11 +341,11 @@ export default function CreateIssueForm() {
 
         <div>
           <label className="block text-sm font-medium text-white mb-1.5">
-            Respondent <span className="text-[#7D8DA0] font-normal">(against whom)</span>
+            Respondent Country <span className="text-[#7D8DA0] font-normal">(against whom)</span>
           </label>
           {usersLoading ? (
             <div className="w-full px-4 py-2.5 text-sm bg-[#112F5A] border border-[rgba(255,255,255,0.08)] text-[#7D8DA0] rounded-[8px]">
-              Loading delegates...
+              Loading countries...
             </div>
           ) : (
             <UserSearchSelect
@@ -374,7 +375,7 @@ export default function CreateIssueForm() {
             />
           )}
           <p className="text-xs text-[#7D8DA0] mt-1.5">
-            You are already set as the primary complainant. Select other delegates who are co-phrasing this issue.
+            You are already set as the primary complainant. Select other countries who are co-phrasing this issue.
           </p>
         </div>
       </div>
