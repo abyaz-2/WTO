@@ -30,6 +30,14 @@ export const countryAssignments = pgTable("country_assignments", {
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
 }, (t) => [index("country_assignments_assigned_by_idx").on(t.assignedBy)]);
 
+export const delegateCredentials = pgTable("delegate_credentials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  countryAssignmentId: uuid("country_assignment_id").notNull().unique().references(() => countryAssignments.id, { onDelete: "cascade" }),
+  encryptedSecret: text("encrypted_secret").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
+});
+
 export const disputes = pgTable("disputes", {
   id: uuid("id").primaryKey().defaultRandom(),
   disputeNumber: text("dispute_number").notNull().unique(),
@@ -47,7 +55,7 @@ export const disputeParties = pgTable("dispute_parties", {
   countryAssignmentId: uuid("country_assignment_id").notNull().references(() => countryAssignments.id, { onDelete: "cascade" }),
   role: text("role").notNull(),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
-}, (t) => [uniqueIndex("dispute_party_unique_idx").on(t.disputeId, t.countryAssignmentId), uniqueIndex("dispute_party_role_idx").on(t.disputeId, t.role), index("dispute_party_assignment_idx").on(t.countryAssignmentId)]);
+}, (t) => [uniqueIndex("dispute_party_unique_idx").on(t.disputeId, t.countryAssignmentId), index("dispute_party_role_idx").on(t.disputeId, t.role), index("dispute_party_assignment_idx").on(t.countryAssignmentId)]);
 
 export const thirdPartyResponses = pgTable("third_party_responses", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -55,7 +63,7 @@ export const thirdPartyResponses = pgTable("third_party_responses", {
   countryAssignmentId: uuid("country_assignment_id").notNull().references(() => countryAssignments.id, { onDelete: "cascade" }),
   response: text("response").notNull(),
   respondedAt: timestamp("responded_at", { mode: "string" }).defaultNow().notNull(),
-}, (t) => [uniqueIndex("third_party_response_unique_idx").on(t.disputeId, t.countryAssignmentId), uniqueIndex("third_party_response_status_idx").on(t.disputeId, t.response), index("third_party_response_assignment_idx").on(t.countryAssignmentId)]);
+}, (t) => [uniqueIndex("third_party_response_unique_idx").on(t.disputeId, t.countryAssignmentId), index("third_party_response_status_idx").on(t.disputeId, t.response), index("third_party_response_assignment_idx").on(t.countryAssignmentId)]);
 
 export const disputeStatements = pgTable("dispute_statements", {
   id: uuid("id").primaryKey().defaultRandom(),

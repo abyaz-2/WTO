@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
-  countryAssignments, disputeAuditEvents, disputeParties, disputes, disputeStatements,
+  countryAssignments, delegateCredentials, disputeAuditEvents, disputeParties, disputes, disputeStatements,
   finalReportFiles, finalReports, notifications, thirdPartyResponses, users, wtoCountries,
 } from "@/lib/db/schema";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
@@ -34,9 +34,12 @@ async function notifyAssignments(tx: DisputeTransaction, assignmentIds: string[]
 }
 
 export async function listCountries() {
-  return db.select({ id: wtoCountries.id, name: wtoCountries.name, assignmentId: countryAssignments.id, email: users.email })
+  const rows = await db.select({ id: wtoCountries.id, name: wtoCountries.name, assignmentId: countryAssignments.id, email: users.email, credentialId: delegateCredentials.id })
     .from(wtoCountries).leftJoin(countryAssignments, eq(countryAssignments.countryId, wtoCountries.id))
-    .leftJoin(users, eq(users.id, countryAssignments.userId)).orderBy(asc(wtoCountries.sortOrder));
+    .leftJoin(users, eq(users.id, countryAssignments.userId))
+    .leftJoin(delegateCredentials, eq(delegateCredentials.countryAssignmentId, countryAssignments.id))
+    .orderBy(asc(wtoCountries.sortOrder));
+  return rows.map(({ credentialId, ...country }) => ({ ...country, hasStoredCredential: Boolean(credentialId) }));
 }
 
 export async function createDispute(actorId: string, data: { title: string; description: string; complainantAssignmentIds: string[]; respondentAssignmentIds: string[] }) {
@@ -194,7 +197,8 @@ export async function getDispute(disputeId: string, viewer?: { id: string; role:
   const files = report ? await db.select().from(finalReportFiles).where(eq(finalReportFiles.reportId, report.id)) : [];
   const events = viewer?.role === "executive_board" ? await db.select().from(disputeAuditEvents).where(eq(disputeAuditEvents.disputeId, disputeId)).orderBy(asc(disputeAuditEvents.createdAt)) : [];
   const parties = viewer?.role === "delegate" ? allParties.filter((party) => party.assignmentId === viewerAssignmentId).map((party) => ({ ...party, statement: party.assignmentId === viewerAssignmentId ? party.statement : null })) : allParties;
-  return { ...dispute, parties, responses: viewer?.role === "executive_board" ? allResponses : [], report: report && (viewer?.role === "executive_board" || dispute.status === "final_report_published") ? { ...report, files } : null, events };
+  const viewerThirdPartyResponse = viewerAssignmentId ? allResponses.find((response) => response.assignmentId === viewerAssignmentId)?.response ?? null : null;
+  return { ...dispute, parties, responses: viewer?.role === "executive_board" ? allResponses : [], viewerThirdPartyResponse, report: report && (viewer?.role === "executive_board" || dispute.status === "final_report_published") ? { ...report, files } : null, events };
 }
 
 export async function listDisputes(userId: string, role: "executive_board" | "delegate") {

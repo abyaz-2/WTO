@@ -8,6 +8,7 @@ type Country = {
   name: string;
   assignmentId: string | null;
   email: string | null;
+  hasStoredCredential: boolean;
 };
 
 type Credential = { country: string; email: string; password: string };
@@ -33,6 +34,8 @@ export default function CountryAssignments() {
   const [countryId, setCountryId] = useState("");
   const [email, setEmail] = useState("");
   const [credential, setCredential] = useState<Credential | null>(null);
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({});
+  const [revealingCountryId, setRevealingCountryId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -44,7 +47,7 @@ export default function CountryAssignments() {
   }, []);
 
   useEffect(() => {
-    void load();
+    void Promise.resolve().then(load);
   }, [load]);
 
   async function assign(event: FormEvent) {
@@ -77,6 +80,27 @@ export default function CountryAssignments() {
       await load();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Could not reassign the login.");
+    }
+  }
+
+  async function revealCredential(country: Country) {
+    setError("");
+    setRevealingCountryId(country.id);
+    try {
+      const { password } = await request(`/api/v1/countries/${country.id}/credential`);
+      setRevealedPasswords((current) => ({ ...current, [country.id]: password }));
+    } catch (revealError) {
+      setError(revealError instanceof Error ? revealError.message : "Could not reveal the stored password.");
+    } finally {
+      setRevealingCountryId(null);
+    }
+  }
+
+  async function copyPassword(password: string) {
+    try {
+      await navigator.clipboard.writeText(password);
+    } catch {
+      setError("Could not copy the password. Select it and copy manually.");
     }
   }
 
@@ -118,6 +142,15 @@ export default function CountryAssignments() {
                 <span className="inline-flex items-center gap-1 rounded-md border border-amber-300/30 bg-amber-300/10 px-2 py-1 text-xs text-amber-100" aria-live="polite">
                   Password <code className="font-semibold">{credential.password}</code>
                 </span>
+              )}
+              {country.hasStoredCredential && (
+                <div className="flex items-center gap-2">
+                  {revealedPasswords[country.id] ? (
+                    <><code className="rounded-md border border-amber-300/30 bg-amber-300/10 px-2 py-1 text-xs font-semibold text-amber-100">{revealedPasswords[country.id]}</code><button type="button" onClick={() => void copyPassword(revealedPasswords[country.id])} className="text-xs font-medium text-[#9AC5FF] hover:text-white">Copy</button></>
+                  ) : (
+                    <button type="button" disabled={revealingCountryId === country.id} onClick={() => void revealCredential(country)} className="rounded-md border border-white/15 px-2 py-1 text-xs font-medium text-[#B6C3D1] transition-colors hover:border-[#6CA9FF] hover:text-white disabled:opacity-50">{revealingCountryId === country.id ? "Revealing…" : "Reveal password"}</button>
+                  )}
+                </div>
               )}
               {country.assignmentId && <button type="button" onClick={() => reassignCredential(country)} className="text-xs font-medium text-[#9AC5FF] hover:text-white">Reassign</button>}
             </div>

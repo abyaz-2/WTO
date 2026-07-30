@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { countryAssignments, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NotFoundError, ConflictError, ValidationError, ForbiddenError } from "./errors";
 import { getSupabaseUrl } from "@/lib/supabase/config";
 import { createClient as createSupabaseClient, type User as SupabaseAuthUser } from "@supabase/supabase-js";
+import { storeDelegateCredential } from "@/lib/security/delegate-credentials";
 
 export type UserRole = "executive_board" | "delegate";
 
@@ -222,6 +223,9 @@ export async function resetUserPassword(userId: string, newPassword: string) {
   if (error) {
     throw new ValidationError(error.message || "Failed to reset password");
   }
+
+  const [assignment] = await db.select({ id: countryAssignments.id }).from(countryAssignments).where(eq(countryAssignments.userId, userId)).limit(1);
+  if (assignment) await storeDelegateCredential(assignment.id, newPassword);
 
   return { success: true };
 }

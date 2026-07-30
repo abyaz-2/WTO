@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 type Dispute = { id: string; disputeNumber: string; title: string; status: string; updatedAt: string };
 async function api(path: string) { const { data: { session } } = await createClient().auth.getSession(); const res = await fetch(path, { headers: { Authorization: `Bearer ${session?.access_token}` } }); if (!res.ok) throw new Error("Could not load disputes"); return res.json(); }
-const labels: Record<string, string> = { pending_eb_review: "Awaiting EB", third_party_response: "Third-party responses", statements_open: "Statements open", statements_closed: "EB report preparation", final_report_published: "Final report published", rejected: "Rejected" };
+const labels: Record<string, string> = { pending_eb_review: "Awaiting EB", third_party_response: "Third-party responses", third_party_eb_review: "Third-party EB review", statements_open: "Statements open", statements_closed: "EB report preparation", final_report_published: "Final report published", rejected: "Rejected" };
 export default function DisputeListClient() {
   const [items, setItems] = useState<Dispute[]>([]); const [role, setRole] = useState("delegate");
   useEffect(() => { api("/api/v1/auth/session").then((x) => setRole(x.user?.role ?? "delegate")); api("/api/v1/disputes").then(setItems).catch(() => setItems([])); }, []);

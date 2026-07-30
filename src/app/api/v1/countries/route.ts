@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import crypto from "crypto";
 import { db } from "@/lib/db";
-import { countryAssignments, securityAuditEvents, users, wtoCountries } from "@/lib/db/schema";
+import { countryAssignments, delegateCredentials, securityAuditEvents, users, wtoCountries } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { getCurrentUser, requireEb } from "@/lib/middleware/auth";
 import { createUser } from "@/lib/services/user";
@@ -9,6 +9,7 @@ import { listCountries } from "@/lib/services/dispute";
 import { ConflictError, handleApiError, ValidationError } from "@/lib/services/errors";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { encryptCredential } from "@/lib/security/delegate-credentials";
 
 const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 function temporaryPassword() {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
     const countries = await listCountries();
-    return Response.json(user.role === "executive_board" ? countries : countries.map(({ email: _email, ...country }) => country));
+    return Response.json(user.role === "executive_board" ? countries : countries.map((country) => ({ id: country.id, name: country.name, assignmentId: country.assignmentId })));
   } catch (error) { return handleApiError(error); }
 }
 
@@ -43,7 +44,9 @@ export async function POST(request: NextRequest) {
         if (existing) throw new ConflictError("This country already has a delegate assignment");
         const { user } = await createUser({ email: email.trim().toLowerCase(), country: country.name, password, role: "delegate" });
         createdUser = user;
-        await tx.insert(countryAssignments).values({ countryId, userId: user.id, assignedBy: actor.id });
+        const [assignment] = await tx.insert(countryAssignments).values({ countryId, userId: user.id, assignedBy: actor.id }).returning({ id: countryAssignments.id });
+        if (!assignment) throw new Error("Could not create country assignment");
+        await tx.insert(delegateCredentials).values({ countryAssignmentId: assignment.id, encryptedSecret: encryptCredential(password) });
         await tx.insert(securityAuditEvents).values({ actorId: actor.id, action: "country_assigned", targetId: countryId, detail: { userId: user.id } });
       });
     } catch (error) {
@@ -77,7 +80,9 @@ export async function PATCH(request: NextRequest) {
           const { user } = await createUser({ email: email.trim().toLowerCase(), country: assignment.name, password, role: "delegate" });
           createdUser = user;
           await tx.update(users).set({ isActive: false, updatedAt: new Date().toISOString() }).where(eq(users.id, assignment.userId));
-          await tx.update(countryAssignments).set({ userId: user.id, assignedBy: actor.id, updatedAt: new Date().toISOString() }).where(eq(countryAssignments.countryId, countryId));
+          const [updatedAssignment] = await tx.update(countryAssignments).set({ userId: user.id, assignedBy: actor.id, updatedAt: new Date().toISOString() }).where(eq(countryAssignments.countryId, countryId)).returning({ id: countryAssignments.id });
+          if (!updatedAssignment) throw new Error("Could not update country assignment");
+          await tx.insert(delegateCredentials).values({ countryAssignmentId: updatedAssignment.id, encryptedSecret: encryptCredential(password) }).onConflictDoUpdate({ target: delegateCredentials.countryAssignmentId, set: { encryptedSecret: encryptCredential(password), updatedAt: new Date().toISOString() } });
           await tx.insert(securityAuditEvents).values({ actorId: actor.id, action: "country_reassigned", targetId: countryId, detail: { previousUserId: assignment.userId, userId: user.id } });
       });
     } catch (error) {

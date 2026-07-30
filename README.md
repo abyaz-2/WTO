@@ -40,6 +40,7 @@ Set these variables for the Supabase and admin access flow:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SERVICE_KEY`
 - `ADMIN_EMAIL` or `ADMIN_EMAILS` for the user-management allowlist
+- `CREDENTIAL_ENCRYPTION_KEY`: a base64-encoded 32-byte key used to encrypt persisted delegate passwords. Generate one with `openssl rand -base64 32` and keep it stable; rotating it without re-encrypting stored credentials makes them unreadable.
 
 ## Deploy on Vercel
 
