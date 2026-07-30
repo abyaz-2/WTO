@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  index,
   jsonb,
   numeric,
   pgTable,
@@ -27,7 +28,7 @@ export const countryAssignments = pgTable("country_assignments", {
   assignedBy: uuid("assigned_by").references(() => users.id),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
-});
+}, (t) => [index("country_assignments_assigned_by_idx").on(t.assignedBy)]);
 
 export const disputes = pgTable("disputes", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -38,7 +39,7 @@ export const disputes = pgTable("disputes", {
   createdBy: uuid("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
-}, (t) => [uniqueIndex("disputes_status_updated_idx").on(t.status, t.updatedAt)]);
+}, (t) => [uniqueIndex("disputes_status_updated_idx").on(t.status, t.updatedAt), index("disputes_created_by_idx").on(t.createdBy)]);
 
 export const disputeParties = pgTable("dispute_parties", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -46,7 +47,7 @@ export const disputeParties = pgTable("dispute_parties", {
   countryAssignmentId: uuid("country_assignment_id").notNull().references(() => countryAssignments.id),
   role: text("role").notNull(),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
-}, (t) => [uniqueIndex("dispute_party_unique_idx").on(t.disputeId, t.countryAssignmentId), uniqueIndex("dispute_party_role_idx").on(t.disputeId, t.role)]);
+}, (t) => [uniqueIndex("dispute_party_unique_idx").on(t.disputeId, t.countryAssignmentId), uniqueIndex("dispute_party_role_idx").on(t.disputeId, t.role), index("dispute_party_assignment_idx").on(t.countryAssignmentId)]);
 
 export const thirdPartyResponses = pgTable("third_party_responses", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -54,7 +55,7 @@ export const thirdPartyResponses = pgTable("third_party_responses", {
   countryAssignmentId: uuid("country_assignment_id").notNull().references(() => countryAssignments.id),
   response: text("response").notNull(),
   respondedAt: timestamp("responded_at", { mode: "string" }).defaultNow().notNull(),
-}, (t) => [uniqueIndex("third_party_response_unique_idx").on(t.disputeId, t.countryAssignmentId), uniqueIndex("third_party_response_status_idx").on(t.disputeId, t.response)]);
+}, (t) => [uniqueIndex("third_party_response_unique_idx").on(t.disputeId, t.countryAssignmentId), uniqueIndex("third_party_response_status_idx").on(t.disputeId, t.response), index("third_party_response_assignment_idx").on(t.countryAssignmentId)]);
 
 export const disputeStatements = pgTable("dispute_statements", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -70,7 +71,7 @@ export const finalReports = pgTable("final_reports", {
   externalUrl: text("external_url"),
   publishedBy: uuid("published_by").notNull().references(() => users.id),
   publishedAt: timestamp("published_at", { mode: "string" }).defaultNow().notNull(),
-});
+}, (t) => [index("final_reports_published_by_idx").on(t.publishedBy)]);
 
 export const finalReportFiles = pgTable("final_report_files", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -80,7 +81,7 @@ export const finalReportFiles = pgTable("final_report_files", {
   mimeType: text("mime_type").notNull(),
   fileSize: integer("file_size").notNull(),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
-});
+}, (t) => [index("final_report_files_report_idx").on(t.reportId)]);
 
 export const disputeAuditEvents = pgTable("dispute_audit_events", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -89,7 +90,7 @@ export const disputeAuditEvents = pgTable("dispute_audit_events", {
   eventType: text("event_type").notNull(),
   detail: jsonb("detail").default("{}"),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
-}, (t) => [uniqueIndex("dispute_audit_events_dispute_idx").on(t.disputeId, t.createdAt)]);
+}, (t) => [uniqueIndex("dispute_audit_events_dispute_idx").on(t.disputeId, t.createdAt), index("dispute_audit_events_actor_idx").on(t.actorId)]);
 
 export const rateLimitEvents = pgTable("rate_limit_events", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -105,7 +106,7 @@ export const securityAuditEvents = pgTable("security_audit_events", {
   targetId: text("target_id").notNull(),
   detail: jsonb("detail").default("{}"),
   createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
-}, (t) => [uniqueIndex("security_audit_events_lookup_idx").on(t.action, t.createdAt)]);
+}, (t) => [uniqueIndex("security_audit_events_lookup_idx").on(t.action, t.createdAt), index("security_audit_events_actor_idx").on(t.actorId)]);
 
 export const users = pgTable("users", {
   id: uuid().primaryKey().defaultRandom(),
