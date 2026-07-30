@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/proxy";
 
 const DASHBOARD_ROUTES: string[] = [];
-const AUTH_ROUTES = ["/login", "/signup", "/forgot-password"];
+const AUTH_ROUTES = ["/login", "/forgot-password"];
 
 export default async function proxy(request: NextRequest) {
   const { supabase, supabaseResponse } = await createClient(request);

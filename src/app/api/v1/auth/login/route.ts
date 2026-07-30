@@ -4,6 +4,7 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { handleApiError, apiResponse, ValidationError, UnauthorizedError } from "@/lib/services/errors";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,8 @@ export async function POST(request: NextRequest) {
     if (!email || !password) {
       throw new ValidationError("Email and password are required");
     }
+    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    await enforceRateLimit("login", `${clientIp}|${String(email).trim().toLowerCase()}`, 5, 300);
 
     const supabaseUrl = getSupabaseUrl();
     const supabaseAnonKey = getSupabaseAnonKey();
@@ -39,14 +42,10 @@ export async function POST(request: NextRequest) {
 
     const session = await loginRes.json();
 
-    try {
-      await db
-        .update(users)
-        .set({ lastLoginAt: new Date().toISOString() })
-        .where(eq(users.supabaseId, session.user.id));
-    } catch (dbError) {
-      console.warn("Failed to update lastLoginAt after successful Supabase login", dbError);
-    }
+    const [profile] = await db.select({ id: users.id, isActive: users.isActive })
+      .from(users).where(eq(users.supabaseId, session.user.id)).limit(1);
+    if (!profile?.isActive) throw new UnauthorizedError("This account is not active");
+    await db.update(users).set({ lastLoginAt: new Date().toISOString() }).where(eq(users.id, profile.id));
 
     return Response.json(
       apiResponse({

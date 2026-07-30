@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function getUser() {
   const supabase = await createServerClient();
@@ -12,15 +15,24 @@ export async function requireAuth() {
   if (!user) {
     redirect("/login");
   }
+  if (!(await getDatabaseRole(user.id))) {
+    redirect("/login");
+  }
   return user;
 }
 
 export async function requireEb() {
   const user = await requireAuth();
-  if (getRole(user) !== "executive_board") {
+  if (await getDatabaseRole(user.id) !== "executive_board") {
     redirect("/");
   }
   return user;
+}
+
+export async function getDatabaseRole(supabaseId: string): Promise<Role | null> {
+  const [profile] = await db.select({ role: users.role, isActive: users.isActive }).from(users).where(eq(users.supabaseId, supabaseId)).limit(1);
+  if (!profile?.isActive) return null;
+  return profile.role === "executive_board" || profile.role === "delegate" ? profile.role : null;
 }
 
 function getAdminEmails(): string[] {

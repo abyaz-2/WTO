@@ -7,8 +7,105 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
+// Lean WTO dispute workflow. The legacy tables above remain for migration safety,
+// while all new application paths use the normalized tables below.
+export const wtoCountries = pgTable("wto_countries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  sortOrder: integer("sort_order").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const countryAssignments = pgTable("country_assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  countryId: uuid("country_id").notNull().unique().references(() => wtoCountries.id),
+  userId: uuid("user_id").notNull().unique().references(() => users.id),
+  assignedBy: uuid("assigned_by").references(() => users.id),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const disputes = pgTable("disputes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disputeNumber: text("dispute_number").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull().default("pending_eb_review"),
+  createdBy: uuid("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().notNull(),
+}, (t) => [uniqueIndex("disputes_status_updated_idx").on(t.status, t.updatedAt)]);
+
+export const disputeParties = pgTable("dispute_parties", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disputeId: uuid("dispute_id").notNull().references(() => disputes.id),
+  countryAssignmentId: uuid("country_assignment_id").notNull().references(() => countryAssignments.id),
+  role: text("role").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+}, (t) => [uniqueIndex("dispute_party_unique_idx").on(t.disputeId, t.countryAssignmentId), uniqueIndex("dispute_party_role_idx").on(t.disputeId, t.role)]);
+
+export const thirdPartyResponses = pgTable("third_party_responses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disputeId: uuid("dispute_id").notNull().references(() => disputes.id),
+  countryAssignmentId: uuid("country_assignment_id").notNull().references(() => countryAssignments.id),
+  response: text("response").notNull(),
+  respondedAt: timestamp("responded_at", { mode: "string" }).defaultNow().notNull(),
+}, (t) => [uniqueIndex("third_party_response_unique_idx").on(t.disputeId, t.countryAssignmentId), uniqueIndex("third_party_response_status_idx").on(t.disputeId, t.response)]);
+
+export const disputeStatements = pgTable("dispute_statements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disputePartyId: uuid("dispute_party_id").notNull().unique().references(() => disputeParties.id),
+  content: text("content").notNull(),
+  submittedAt: timestamp("submitted_at", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const finalReports = pgTable("final_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disputeId: uuid("dispute_id").notNull().unique().references(() => disputes.id),
+  content: text("content"),
+  externalUrl: text("external_url"),
+  publishedBy: uuid("published_by").notNull().references(() => users.id),
+  publishedAt: timestamp("published_at", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const finalReportFiles = pgTable("final_report_files", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  reportId: uuid("report_id").notNull().references(() => finalReports.id),
+  storagePath: text("storage_path").notNull(),
+  fileName: text("file_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  fileSize: integer("file_size").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const disputeAuditEvents = pgTable("dispute_audit_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disputeId: uuid("dispute_id").notNull().references(() => disputes.id),
+  actorId: uuid("actor_id").references(() => users.id),
+  eventType: text("event_type").notNull(),
+  detail: jsonb("detail").default("{}"),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+}, (t) => [uniqueIndex("dispute_audit_events_dispute_idx").on(t.disputeId, t.createdAt)]);
+
+export const rateLimitEvents = pgTable("rate_limit_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  keyHash: text("key_hash").notNull(),
+  action: text("action").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+}, (t) => [uniqueIndex("rate_limit_events_lookup_idx").on(t.action, t.keyHash, t.createdAt)]);
+
+export const securityAuditEvents = pgTable("security_audit_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorId: uuid("actor_id").references(() => users.id),
+  action: text("action").notNull(),
+  targetId: text("target_id").notNull(),
+  detail: jsonb("detail").default("{}"),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+}, (t) => [uniqueIndex("security_audit_events_lookup_idx").on(t.action, t.createdAt)]);
 
 export const users = pgTable("users", {
   id: uuid().primaryKey().defaultRandom(),

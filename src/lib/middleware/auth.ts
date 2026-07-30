@@ -4,7 +4,6 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { UnauthorizedError, ForbiddenError } from "@/lib/services/errors";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
-import { isAdminEmail } from "@/lib/auth";
 
 export interface AuthUser {
   id: string;
@@ -39,55 +38,11 @@ export async function getCurrentUser(request: NextRequest): Promise<AuthUser> {
 
   const supabaseUser = await response.json();
 
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.supabaseId, supabaseUser.id))
-        .limit(1);
-
-      if (!user) {
-        throw new UnauthorizedError("User not found");
-      }
-
-      if (!user.isActive) {
-        throw new UnauthorizedError("Account is deactivated");
-      }
-
-      return {
-        id: user.id,
-        supabaseId: user.supabaseId,
-        email: user.email,
-        displayName: user.displayName,
-        role: user.role as "executive_board" | "delegate",
-        isActive: user.isActive,
-      };
-    } catch (error) {
-      const errorCode = typeof error === "object" && error && "code" in error ? String((error as { code?: string }).code) : "";
-      const errorMessage = error instanceof Error ? error.message : "";
-      const isConnectivityError =
-        ["ENOTFOUND", "SELF_SIGNED_CERT_IN_CHAIN", "ECONNREFUSED", "ETIMEDOUT", "EAI_AGAIN"].includes(errorCode) ||
-        /Failed query|getaddrinfo|certificate/i.test(errorMessage);
-
-      if (!isConnectivityError) {
-        throw error;
-      }
-
-      return {
-        id: supabaseUser.id,
-        supabaseId: supabaseUser.id,
-        email: supabaseUser.email,
-        displayName:
-          supabaseUser.user_metadata?.display_name ||
-          supabaseUser.user_metadata?.full_name ||
-          supabaseUser.email?.split("@")[0] ||
-          "User",
-        role: isAdminEmail(supabaseUser.email) || supabaseUser.user_metadata?.role === "executive_board"
-          ? "executive_board"
-          : "delegate",
-        isActive: true,
-      };
-    }
+  const [user] = await db.select().from(users).where(eq(users.supabaseId, supabaseUser.id)).limit(1);
+  if (!user) throw new UnauthorizedError("User not found");
+  if (!user.isActive) throw new UnauthorizedError("Account is deactivated");
+  if (user.role !== "executive_board" && user.role !== "delegate") throw new UnauthorizedError("Invalid account role");
+  return { id: user.id, supabaseId: user.supabaseId, email: user.email, displayName: user.displayName, role: user.role, isActive: user.isActive };
 }
 
 export function requireRole(user: AuthUser, allowedRoles: string[]) {

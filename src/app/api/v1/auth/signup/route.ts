@@ -1,84 +1,11 @@
 import { NextRequest } from "next/server";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { handleApiError, apiResponse, ValidationError, ConflictError } from "@/lib/services/errors";
-import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
+import { ForbiddenError, handleApiError } from "@/lib/services/errors";
 
+// Delegate and EB accounts are intentionally provisioned server-side by EB only.
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, display_name, role } = await request.json();
-
-    if (!email || !password || !display_name || !role) {
-      throw new ValidationError("Email, password, display name, and role are required");
-    }
-
-    if (password.length < 8) {
-      throw new ValidationError("Password must be at least 8 characters");
-    }
-
-    if (!["delegate", "executive_board"].includes(role)) {
-      throw new ValidationError("Role must be 'delegate' or 'executive_board'");
-    }
-
-    const [existing] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
-
-    if (existing) {
-      throw new ConflictError("A user with this email already exists.");
-    }
-
-    const supabaseUrl = getSupabaseUrl();
-    const supabaseAnonKey = getSupabaseAnonKey();
-
-    let signupRes: Response;
-    try {
-      signupRes = await fetch(`${supabaseUrl}/auth/v1/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: supabaseAnonKey,
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          data: {
-            display_name,
-            role,
-          },
-        }),
-      });
-    } catch {
-      throw new ValidationError(
-        `Unable to reach Supabase at ${supabaseUrl}. Check SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL.`,
-      );
-    }
-
-    if (!signupRes.ok) {
-      const err = await signupRes.json();
-      throw new ValidationError(err.msg || err.error_description || "Failed to create account");
-    }
-
-    const supabaseUser = await signupRes.json();
-
-    const [user] = await db
-      .insert(users)
-      .values({
-        supabaseId: supabaseUser.id,
-        email,
-        displayName: display_name,
-        role,
-        isActive: true,
-      })
-      .returning();
-
-    return Response.json(
-      apiResponse({ userId: user.id, email: user.email, displayName: user.displayName, role: user.role }),
-      { status: 201 },
-    );
+    void request;
+    throw new ForbiddenError("Accounts are provisioned by the Executive Board only");
   } catch (error) {
     return handleApiError(error);
   }

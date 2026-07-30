@@ -131,12 +131,6 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
         </button>
       </div>
 
-      <p className="text-center mt-6 text-xs text-[#B6C3D1]">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup" className="text-[#1E6FE8] hover:underline font-semibold">
-          Sign up
-        </Link>
-      </p>
     </form>
   );
 }

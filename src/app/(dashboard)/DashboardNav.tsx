@@ -4,30 +4,25 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import NotificationBell from "@/components/NotificationBell";
-
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "")
-  .split(",")
-  .map((email) => email.trim().toLowerCase())
-  .filter(Boolean);
+import type { Role } from "@/lib/auth";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
-  { href: "/issues", label: "Issues" },
+  { href: "/disputes", label: "Disputes" },
   { href: "/notifications", label: "Notifications" },
 ];
 
 interface DashboardNavProps {
   user: User;
+  role: Role | null;
 }
 
-export default function DashboardNav({ user }: DashboardNavProps) {
+export default function DashboardNav({ user, role }: DashboardNavProps) {
   const pathname = usePathname();
-  const isAdmin =
-    user.user_metadata?.role === "executive_board" ||
-    ADMIN_EMAILS.includes(user.email?.toLowerCase() ?? "");
+  const isAdmin = role === "executive_board";
 
   const items = isAdmin
-    ? NAV_ITEMS.concat({ href: "/users", label: "Users" })
+    ? NAV_ITEMS.concat({ href: "/countries", label: "Country credentials" })
     : NAV_ITEMS;
 
   return (
@@ -65,7 +60,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
             {user.email ?? "User"}
           </p>
           <p className="text-xs text-[#7D8DA0] mt-0.5 capitalize">
-            {user.user_metadata?.role ?? "delegate"}
+            {role ?? "delegate"}
           </p>
         </div>
       </div>
