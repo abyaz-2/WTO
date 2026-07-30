@@ -10,6 +10,11 @@ interface PublicationCertificateProps {
   sha256Hash: string;
 }
 
+const QR_CELLS = Array.from({ length: 25 }, (_, index) => ({
+  active: ((index * 7 + 3) % 11) < 6,
+  opacity: 0.35 + ((index * 13) % 7) / 10,
+}));
+
 export default function PublicationCertificate({
   disputeNumber,
   disputeTitle,
@@ -70,11 +75,11 @@ export default function PublicationCertificate({
           <div className="flex-shrink-0 w-20 h-20 bg-[#112F5A] border border-[rgba(255,255,255,0.08)] rounded-[8px] flex items-center justify-center">
             <div className="text-center">
               <div className="grid grid-cols-5 gap-0.5 mx-auto w-12 h-12">
-                {Array.from({ length: 25 }).map((_, i) => (
+                {QR_CELLS.map((cell, i) => (
                   <div
                     key={i}
-                    className={`rounded-[1px] ${Math.random() > 0.5 ? "bg-[#1E6FE8]" : "bg-[#112F5A]"}`}
-                    style={{ opacity: 0.3 + Math.random() * 0.7 }}
+                    className={`rounded-[1px] ${cell.active ? "bg-[#1E6FE8]" : "bg-[#112F5A]"}`}
+                    style={{ opacity: cell.opacity }}
                   />
                 ))}
               </div>

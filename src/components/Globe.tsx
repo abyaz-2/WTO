@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useMemo, useEffect, useState, useCallback } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 
 function latLngToVec3(lat: number, lng: number, radius: number): THREE.Vector3 {
@@ -469,7 +469,7 @@ function InnerGlobe({ onGlobeClick }: { onGlobeClick: () => void }) {
     }
   }, []);
 
-  const handlePointerDown = useCallback((e: any) => {
+  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
     if (e.point) {
       const hitPoint = e.point.clone();
       const dir = hitPoint.clone().normalize();
@@ -515,22 +515,6 @@ function InnerGlobe({ onGlobeClick }: { onGlobeClick: () => void }) {
 }
 
 export default function Globe({ className }: { className?: string }) {
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  if (!mounted) {
-    return <div className={`w-full h-full ${className ?? ""}`} />;
-  }
-
   return (
     <div className={`w-full h-full ${className ?? ""}`}>
       <Canvas

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -26,16 +26,10 @@ export default function SearchPage() {
   const [page, setPage] = useState(1);
   const perPage = 20;
 
-  const debounceTimer = useCallback(
-    (() => {
-      let timer: ReturnType<typeof setTimeout>;
-      return (value: string) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => setDebouncedQuery(value), 300);
-      };
-    })(),
-    [],
-  );
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 300);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["search", issueId, debouncedQuery, typeFilter, page],
@@ -66,7 +60,7 @@ export default function SearchPage() {
             <input
               type="text"
               value={query}
-              onChange={(e) => { setQuery(e.target.value); debounceTimer(e.target.value); setPage(1); }}
+              onChange={(e) => { setQuery(e.target.value); setPage(1); }}
               placeholder="Search submissions and evidence..."
               className="w-full px-4 py-3 pl-10 text-sm text-white bg-[#0B2345] border border-[rgba(255,255,255,0.08)] rounded-[8px] placeholder:text-[#7D8DA0] focus:outline-none focus:border-[#1E6FE8] transition-colors"
             />

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import type { Notification } from "@/lib/types";
+import { api } from "@/lib/api";
 
 interface NotificationsResponse {
   notifications: Notification[];
@@ -27,15 +28,12 @@ export default function NotificationsPage(): ReactNode {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(ITEMS_PER_PAGE),
+      const result = await api.get<NotificationsResponse>("/notifications", {
+        page,
+        perPage: ITEMS_PER_PAGE,
+        unread: filter === "unread" ? "true" : undefined,
       });
-      if (filter === "unread") params.set("unread", "true");
-      const res = await fetch(`/api/v1/notifications?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to load notifications");
-      const data = await res.json();
-      setData(data);
+      setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load notifications");
     } finally {
@@ -50,8 +48,7 @@ export default function NotificationsPage(): ReactNode {
   async function markAllRead() {
     setMarkingAll(true);
     try {
-      const res = await fetch("/api/v1/notifications/read-all", { method: "POST" });
-      if (!res.ok) throw new Error("Failed");
+      await api.post("/notifications/read-all", {});
       fetchNotifications();
     } catch {
       // ignore

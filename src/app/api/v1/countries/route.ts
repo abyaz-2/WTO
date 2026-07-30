@@ -63,11 +63,13 @@ export async function PATCH(request: NextRequest) {
     requireEb(actor);
     await enforceRateLimit("country_credential_change", actor.id, 30, 3600);
     const { countryId, email } = await request.json();
+    if (typeof email !== "string" || !email.trim() || !email.includes("@")) {
+      throw new ValidationError("A valid email is required to reassign a delegate");
+    }
     const password = temporaryPassword();
-    if (typeof email === "string" && email.trim()) {
-      let oldSupabaseId = ""; let countryName = ""; let createdUser: { id: string; supabaseId: string } | undefined;
-      try {
-        await db.transaction(async (tx) => {
+    let oldSupabaseId = ""; let countryName = ""; let createdUser: { id: string; supabaseId: string } | undefined;
+    try {
+      await db.transaction(async (tx) => {
           await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${countryId}))`);
           const [assignment] = await tx.select({ userId: countryAssignments.userId, supabaseId: users.supabaseId, name: wtoCountries.name }).from(countryAssignments).innerJoin(users, eq(countryAssignments.userId, users.id)).innerJoin(wtoCountries, eq(countryAssignments.countryId, wtoCountries.id)).where(eq(countryAssignments.countryId, countryId)).limit(1);
           if (!assignment) throw new ValidationError("This country has no assigned delegate");
@@ -77,19 +79,12 @@ export async function PATCH(request: NextRequest) {
           await tx.update(users).set({ isActive: false, updatedAt: new Date().toISOString() }).where(eq(users.id, assignment.userId));
           await tx.update(countryAssignments).set({ userId: user.id, assignedBy: actor.id, updatedAt: new Date().toISOString() }).where(eq(countryAssignments.countryId, countryId));
           await tx.insert(securityAuditEvents).values({ actorId: actor.id, action: "country_reassigned", targetId: countryId, detail: { previousUserId: assignment.userId, userId: user.id } });
-        });
-      } catch (error) {
-        if (createdUser) { await db.update(users).set({ isActive: false }).where(eq(users.id, createdUser.id)).catch(() => undefined); await supabaseAdmin.auth.admin.deleteUser(createdUser.supabaseId).catch(() => undefined); }
-        throw error;
-      }
-      await supabaseAdmin.auth.admin.deleteUser(oldSupabaseId).catch(() => undefined);
-      return Response.json({ country: countryName, email: email.trim().toLowerCase(), password });
+      });
+    } catch (error) {
+      if (createdUser) { await db.update(users).set({ isActive: false }).where(eq(users.id, createdUser.id)).catch(() => undefined); await supabaseAdmin.auth.admin.deleteUser(createdUser.supabaseId).catch(() => undefined); }
+      throw error;
     }
-    const [assignment] = await db.select({ userId: countryAssignments.userId, email: users.email, name: wtoCountries.name }).from(countryAssignments).innerJoin(users, eq(countryAssignments.userId, users.id)).innerJoin(wtoCountries, eq(countryAssignments.countryId, wtoCountries.id)).where(eq(countryAssignments.countryId, countryId)).limit(1);
-    if (!assignment) throw new ValidationError("This country has no assigned delegate");
-    const { resetUserPassword } = await import("@/lib/services/user");
-    await resetUserPassword(assignment.userId, password);
-    await db.insert(securityAuditEvents).values({ actorId: actor.id, action: "country_password_reset", targetId: countryId, detail: { userId: assignment.userId } });
-    return Response.json({ country: assignment.name, email: assignment.email, password });
+    await supabaseAdmin.auth.admin.deleteUser(oldSupabaseId).catch(() => undefined);
+    return Response.json({ country: countryName, email: email.trim().toLowerCase(), password });
   } catch (error) { return handleApiError(error); }
 }

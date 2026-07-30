@@ -1,26 +1,35 @@
 "use client";
 
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Notification } from "@/lib/types";
+import { api } from "@/lib/api";
 
-interface NotificationBellProps {
-  userId: string;
-}
-
-export default function NotificationBell({ userId }: NotificationBellProps): ReactNode {
+export default function NotificationBell(): ReactNode {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const data = await api.get<{ notifications: Notification[]; unreadCount: number }>("/notifications", { perPage: 5 });
+      setNotifications(data.notifications ?? []);
+      setUnreadCount(data.unreadCount ?? 0);
+    } catch {
+      // A notification polling failure should not interrupt the current page.
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [userId]);
+    void fetchNotifications();
+    const interval = window.setInterval(() => void fetchNotifications(), 30000);
+    return () => window.clearInterval(interval);
+  }, [fetchNotifications]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -31,20 +40,6 @@ export default function NotificationBell({ userId }: NotificationBellProps): Rea
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  async function fetchNotifications() {
-    try {
-      const res = await fetch(`/api/v1/notifications?userId=${userId}&limit=5`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setNotifications(data.notifications ?? []);
-      setUnreadCount(data.unreadCount ?? 0);
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function getTypeIcon(type: string): string {
     switch (type) {

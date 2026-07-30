@@ -11,16 +11,18 @@
   --color-accent-secondary: #6CA9FF;
   --color-border-subtle: rgba(255, 255, 255, 0.08);
   --color-border-strong: rgba(255, 255, 255, 0.16);
+  --font-sora: "Avenir Next", Avenir, "Segoe UI", sans-serif;
   --font-display: var(--font-sora);
   --font-body: var(--font-sora);
   --content-width: 1200px;
   --max-width: 1440px;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Keep the reset in Tailwind's base layer so spacing utility classes win. */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 }
 
 html {

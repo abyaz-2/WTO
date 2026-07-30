@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import type { ReportVersion, ReportSection } from "@/lib/types";
+import type { ReportVersion } from "@/lib/types";
 import CorrectionRequest from "@/components/CorrectionRequest";
 
 interface PartyStatus {
@@ -30,6 +30,7 @@ export default function ReviewPage(): ReactNode {
   const [selectedText, setSelectedText] = useState("");
   const [selectedSectionTitle, setSelectedSectionTitle] = useState("");
   const [correctionSubmitting, setCorrectionSubmitting] = useState(false);
+  const [now] = useState(Date.now);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -115,7 +116,6 @@ export default function ReviewPage(): ReactNode {
 
   function getDeadlineInfo(): { color: string; label: string } {
     if (!deadline) return { color: "text-[#7D8DA0]", label: "No deadline set" };
-    const now = Date.now();
     const deadlineTime = new Date(deadline).getTime();
     const diff = deadlineTime - now;
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));

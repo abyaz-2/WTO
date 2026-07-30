@@ -8,6 +8,7 @@ import {
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 
 export const DISPUTE_STATUSES = ["pending_eb_review", "rejected", "third_party_response", "third_party_eb_review", "statements_open", "statements_closed", "final_report_published"] as const;
+type DisputeTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 async function assignmentForUser(userId: string) {
   const [assignment] = await db.select({ id: countryAssignments.id, country: wtoCountries.name })
@@ -17,16 +18,16 @@ async function assignmentForUser(userId: string) {
   return assignment;
 }
 
-async function audit(tx: typeof db, disputeId: string, actorId: string, eventType: string, detail: Record<string, unknown> = {}) {
+async function audit(tx: DisputeTransaction, disputeId: string, actorId: string, eventType: string, detail: Record<string, unknown> = {}) {
   await tx.insert(disputeAuditEvents).values({ disputeId, actorId, eventType, detail });
 }
 
-async function notifyAllDelegates(tx: typeof db, type: string, title: string, body: string, link: string) {
+async function notifyAllDelegates(tx: DisputeTransaction, type: string, title: string, body: string, link: string) {
   const recipients = await tx.select({ id: users.id }).from(users).where(and(eq(users.role, "delegate"), eq(users.isActive, true)));
   if (recipients.length) await tx.insert(notifications).values(recipients.map(({ id }) => ({ userId: id, type, content: { title, body, link } })));
 }
 
-async function notifyAssignments(tx: typeof db, assignmentIds: string[], type: string, title: string, body: string, link: string) {
+async function notifyAssignments(tx: DisputeTransaction, assignmentIds: string[], type: string, title: string, body: string, link: string) {
   if (!assignmentIds.length) return;
   const recipients = await tx.select({ userId: countryAssignments.userId }).from(countryAssignments).where(inArray(countryAssignments.id, assignmentIds));
   if (recipients.length) await tx.insert(notifications).values(recipients.map(({ userId }) => ({ userId, type, content: { title, body, link } })));

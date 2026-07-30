@@ -32,7 +32,7 @@ export default function DashboardNav({ user, role }: DashboardNavProps) {
           <span className="text-sm font-semibold text-white tracking-tight">WTO</span>
           <span className="block text-xs text-[#7D8DA0] mt-1">Dispute Platform</span>
         </div>
-        <NotificationBell userId={user.id} />
+        <NotificationBell />
       </div>
 
       <nav className="flex-1 px-4 py-6 flex flex-col gap-1">
